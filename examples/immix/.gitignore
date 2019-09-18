@@ -1,0 +1,11 @@
+/out*.txt
+/std*.txt
+*.log
+^.*\.s$
+*.out
+*.dylib
+*.so
+Cargo.lock
+target/*
+.project
+.setting

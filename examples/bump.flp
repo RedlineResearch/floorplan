@@ -1,0 +1,12 @@
+
+Bump ||2^16 bytes|| @(2^16 bytes)@ -> seq {
+  union {
+    Partial ||7 * 2^13 bytes|| @(2^13 bytes)@ -> seq {
+      cells   : # Cell,
+      cursor  : # words,
+      limit   : 0 words
+    }
+    | # Allocd -> 1 words
+  }
+}
+

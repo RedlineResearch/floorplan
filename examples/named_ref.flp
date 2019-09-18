@@ -1,0 +1,11 @@
+// Parser test: a named reference to a flp type specified elsewhere
+
+Seq -> seq {
+  a : # A,
+  b : B
+}
+
+A -> 1 words
+
+B -> 2 bytes
+

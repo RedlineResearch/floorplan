@@ -1,0 +1,222 @@
+
+digraph call {
+  compound=true;
+  subgraph cluster_Allocator {
+    label="Allocator Call Graph";
+    
+    ALLOCATOR_FNCN [label="Key: this is an\nallocator.fncn()"];
+
+    mutator_alloc [label="mutator.alloc\n(bytes, align)"];
+    
+    init [label="mutator.init_object\n(address, 0b100_0011)"];
+    immix_space [label="ImmixSpace::new\n(10 << 20 bytes)"];
+    
+    block_init [label="Block::init(cursor)"];
+
+    mutator_alloc -> init;
+
+    block_alloc [label="Block::alloc_obj\n(cursor)"];
+    object_alloc   [label="Object::alloc\n(cursor)"];
+    cell_alloc  [label="Cell::alloc\n(cursor)"];
+
+    mutator_alloc -> block_alloc;     // Mutator allocator asks block for an object.
+    block_alloc -> cell_alloc; // Block allocator hands off cursor to cell initialization.
+    cell_alloc -> object_alloc;  // Cell allocator calls object initialization.
+  //alloc -> "plus\n(BYTES_IN_WORD)";
+    immix_space -> block_init;
+  }
+  
+  subgraph cluster_Application {
+    label="Application Call Graph";
+    rankdir="LR";
+    main [label="main()"];
+
+    allocLL [label="alloc LLNode\n(2 ptrs + 1 usize)"];
+    allocQN [label="alloc QNode\n(2 ptrs)"];
+    allocDQ [label="alloc Dequeue\n(2 ptrs)"];
+    
+    //main -> immix_space [label="1"];
+    main -> allocDQ [label="2"];
+    main -> allocQN [label="3"];
+    main -> allocLL [label="4"];
+
+    //allocLL -> alloc;
+    //allocQN -> alloc;
+    //allocDQ -> alloc;
+    { rank = same; allocDQ; allocQN; allocLL }
+    { rank = same; main }
+  }
+
+  subgraph cluster_GarbageCollector {
+    label="Garbage Collector\nCall Graph";
+    rankdir="LR";
+    
+    mutator_alloc -> gc;
+    gc [label="gc()"];
+    start_trace [label="start_trace\n(roots)"];
+    trace_obj [label="trace_object\n(address)"];
+    collect_roots [label="collect_roots\n(stack)"];
+
+    gc -> collect_roots;
+    gc -> start_trace;
+    start_trace -> trace_obj;
+  }
+
+  subgraph cluster_Application0 {
+    label="Application";
+    main0 [label="main()"];
+    main0 -> immix_space [label="1"];
+    main0 -> mutator_alloc [label="2,3,4"];
+  }
+  subgraph cluster_MemoryThings {
+    label="Memory Transitions";
+    node
+      [ fontsize=12
+      , shape=box
+      , style=filled
+      , color=black
+      , fillcolor=gray];
+    edge
+      [ arrowhead="box"
+      ];
+
+    TYPE_TAG [label="Key: this is a\nTYPE_TAG"];
+
+    FLP_SPACE [label="SPACE"];
+    FLP_BLOCK [label="BLOCK"];
+    FLP_FREEBLOCK [label="FREEBLOCK"];
+    FLP_CELL [label="CELL"];
+    FLP_FREECELL [label="FREECELL"]; 
+    FLP_OBJECT [label="OBJECT"];
+    FLP_OBJ_SIZE [label="OBJ_SIZE"];
+    FLP_UNMAPPED [label="UNMAPPED"];
+    
+    subgraph cluster_ApplicationThings {
+      label="Application Transitions";
+      FLP_LLNODE [label="LLNODE"];
+      FLP_QNODE [label="QNODE"];
+      FLP_DEQUEUE [label="DEQUEUE"];
+      PTR_LLNODE [label="PTR_LLNODE"];
+      PTR_QNODE [label="PTR_QNODE"];
+      USIZE [label="VAL_USIZE"];
+    }
+    
+    immix_space   -> FLP_SPACE; // ImmixSpace *performs* SPACE allocation.
+    block_init    -> FLP_BLOCK;
+    //immix_space   -> FLP_BLOCK; // ImmixSpace *performs* BLOCK allocation.
+    cell_alloc    -> FLP_CELL; // Cell allocator performs CELL allocation.
+    object_alloc  -> FLP_OBJECT;
+    object_alloc  -> FLP_OBJ_SIZE;
+
+    allocLL -> FLP_LLNODE;
+    allocQN -> FLP_QNODE;
+    allocDQ -> FLP_DEQUEUE;
+
+    allocLL -> PTR_LLNODE;
+    allocQN -> PTR_QNODE;
+    allocQN -> PTR_LLNODE;
+    allocDQ -> PTR_QNODE;
+  }
+
+  subgraph memory_transitions {
+    edge
+      [ arrowhead="normal"
+      , style=dashed
+      ];
+    FLP_UNMAPPED -> FLP_SPACE;
+    FLP_SPACE -> FLP_BLOCK;
+    FLP_BLOCK -> FLP_CELL;
+    FLP_CELL  -> FLP_OBJ_SIZE;
+    FLP_CELL  -> FLP_OBJECT;
+
+    FLP_OBJECT -> FLP_LLNODE;
+    FLP_OBJECT -> FLP_QNODE;
+    FLP_OBJECT -> FLP_DEQUEUE;
+
+    FLP_LLNODE -> PTR_LLNODE; // twice...
+    FLP_QNODE -> PTR_QNODE;
+    FLP_QNODE -> PTR_LLNODE;
+    FLP_DEQUEUE -> PTR_QNODE;
+
+    FLP_LLNODE -> USIZE;
+
+    FLP_CELL -> FLP_FREECELL;
+    FLP_FREECELL -> FLP_CELL;
+    
+    FLP_QNODE -> FLP_FREECELL [ltail=cluster_ApplicationThings]; //,lhead=cluster1];
+
+    FLP_FREECELL -> FLP_FREEBLOCK;
+    FLP_FREEBLOCK -> FLP_BLOCK;
+  }
+
+  subgraph cluster_DataStructure {
+    label="Data Structure";
+    style=filled;
+    node
+      [ fontsize=12
+      //, fixedsize=true
+      , shape=box
+      , style="rounded,filled"
+      , color=black
+      , fillcolor=lightgrey];
+    edge
+      [ fontsize=8
+      ];
+
+    DATA_STRUCTURE [label="Key: this is an\nApplication Object"];
+
+    dequeue [label="Deq"];
+    qn0 [label="QN"];
+    qn1 [label="... QN ..."];
+    qn2 [label="QN"];
+
+    dequeue -> qn0 [label="fst"];
+    dequeue -> qn2 [label="lst"];
+    
+    qn0 -> qn1 [label="nxt"];
+    qn1 -> qn2 [label="nxt"];
+    qn2 -> qn2 [label="nxt"];
+
+    { rank = same; qn0; qn1; qn2 }
+
+    ll0_0 [label="LL"];
+    ll0_1 [label="LL"];
+    ll0_2 [label="LL"];
+
+    qn0 -> ll0_0 [label="head"];
+    qn0 -> ll0_2 [label="tail"];
+    ll0_0 -> ll0_0 [label="bwd"];
+    ll0_0 -> ll0_1 [label="fwd"];
+    ll0_1 -> ll0_0 [label="bwd"];
+    ll0_1 -> ll0_2 [label="fwd"];
+    ll0_2 -> ll0_2 [label="bwd"];
+    ll0_2 -> ll0_1 [label="fwd"];
+
+    ll1_0 [label="LL"];
+    ll1_1 [label="LL"];
+    ll1_2 [label="LL"];
+    
+    qn1 -> ll1_0 [label="head"];
+    qn1 -> ll1_2 [label="tail"];
+    ll1_0 -> ll1_0 [label="bwd"];
+    ll1_0 -> ll1_1 [label="fwd"];
+    ll1_1 -> ll1_0 [label="bwd"];
+    ll1_1 -> ll1_2 [label="fwd"];
+    ll1_2 -> ll1_2 [label="bwd"];
+    ll1_2 -> ll1_1 [label="fwd"];
+
+    ll2_0 [label="LL"];
+    ll2_1 [label="LL"];
+    ll2_2 [label="LL"];
+    
+    qn2 -> ll2_0 [label="head"];
+    qn2 -> ll2_2 [label="tail"];
+    ll2_0 -> ll2_0 [label="bwd"];
+    ll2_0 -> ll2_1 [label="fwd"];
+    ll2_1 -> ll2_0 [label="bwd"];
+    ll2_1 -> ll2_2 [label="fwd"];
+    ll2_2 -> ll2_2 [label="bwd"];
+    ll2_2 -> ll2_1 [label="fwd"];
+  }
+}
+

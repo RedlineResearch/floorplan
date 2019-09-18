@@ -1,0 +1,9 @@
+// Parser test
+
+RefBits -> bits {
+  SHORT_ENCODE  : 1 bits,
+  OBJ_START     : 1 bits,
+  REF           : 6 bits,
+  MORE          : (2 + 2) bits + 4 bits
+}
+

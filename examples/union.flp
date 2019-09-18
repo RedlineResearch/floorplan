@@ -1,0 +1,7 @@
+// Parser test: basic union test.
+
+Union -> union {
+    Oops
+  | Oops ptr
+}
+

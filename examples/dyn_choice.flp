@@ -1,0 +1,7 @@
+// Parser test: dynamic union of two fixed-width fields.
+
+Union ||2 bytes|| @(2 bytes)@ -> # union {
+    a : 1 bytes
+  | b : 1 bytes
+}
+

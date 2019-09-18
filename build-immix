@@ -1,0 +1,8 @@
+#!/bin/bash
+
+IMMIX="./examples/immix"
+
+stack build flp --ghc-options="-ddump-splices" \
+  && stack exec flp $IMMIX/layout.flp $IMMIX/src/heap/flp/generated.rs \
+  && (cd $IMMIX; cargo build --features "gcbench")
+

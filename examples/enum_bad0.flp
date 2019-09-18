@@ -1,0 +1,7 @@
+// Parser test: basic enum failure due to lower-case ID (prevLive)
+
+LineMark -> enum {
+    Free | Live | FreshAlloc
+  | ConservLive | prevLive
+}
+

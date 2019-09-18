@@ -1,0 +1,17 @@
+[package]
+name = "dist"
+version = "0.1.0"
+authors = ["Karl Cronburg <karl.cronburg@gmail.com>"]
+build = "build.rs"
+
+[build-dependencies]
+cc = "1.0"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+backtrace = "0.2"
+

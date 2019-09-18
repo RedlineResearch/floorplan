@@ -1,0 +1,42 @@
+Region<num_blocks, lines, wrds> -> seq {
+  Space @(2^19 bytes)@ -> union {
+      num_blocks union {
+          FreeBlock @(2^16 bytes)@ -> seq {
+              2^16 bytes }
+        | Block ||2^16 bytes|| @(2^16 bytes)@
+              contains(Line) -> seq {
+              cells : # union {
+                  FreeCell @(1 words)@ -> # words
+                | Cell },
+              remainder : # words,
+              limit     : 0 words } }
+    | wrds words
+    | lines Line @|2^8 bytes|@
+          contains(Cell) -> # bytes },
+  lms   : lines LineMark,
+  refs  : wrds RefBits,
+  mks   : wrds MarkBits }
+Cell @(1 words)@ contains(Word) -> union {
+  seq { cell_size : 1 words,
+    Object -> seq {
+        ptr_0 : Object ptr, ptr_1 : Object ptr,
+        ptr_2 : Object ptr, ptr_3 : Object ptr,
+        payload : # words } }
+  | # words }
+RefBits ||1 bytes|| -> bits {
+    SHORT_ENCODE  : 1 bits,
+    OBJ_START     : 1 bits,
+    REF           : 6 bits }
+LineMark -> enum { Free | Live | FreshAlloc
+                 | ConservLive | PrevLive }
+MarkBits ||1 bytes|| -> bits { MARK : 8 bits }
+Stk -> seq { stack : # seq { Object ptr },
+             lowWater : 0 words }
+Registers -> seq { regs : # seq { Object ptr },
+                   regsEnd : 0 words }
+AppObject -> union {
+    LLNode -> 3 words
+  | QNode  -> 2 words
+  | Dequeue -> 2 words
+  | # words }
+Garbage -> # words

@@ -1,0 +1,7 @@
+// Parser test
+
+Seq -> seq {
+  Oops -> Bar,
+  Foo  -> Baz ptr
+}
+

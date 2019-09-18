@@ -1,0 +1,7 @@
+// Parser test: basic enum
+
+LineMark -> enum {
+    Free | Live | FreshAlloc
+  | ConservLive | PrevLive
+}
+

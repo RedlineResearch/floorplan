@@ -1,0 +1,7 @@
+// Parser test: exponentiation in arithmetic inside a field.
+
+Block -> union {
+    A -> seq { a : 0 words, b : 2^2 words }
+  | B -> seq { a : 0 words, c : 2^4 words }
+}
+

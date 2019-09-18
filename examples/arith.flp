@@ -1,0 +1,4 @@
+// Parser test
+
+Arith ||7 bytes|| -> (4 / 2 * 3 + 1) bytes
+

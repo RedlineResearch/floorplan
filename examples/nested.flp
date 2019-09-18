@@ -1,0 +1,8 @@
+// Parser test: nested groups (union and seq) with
+// fixed-width fields.
+
+Block -> union {
+    A -> seq { a : 0 words, b : 2 words }
+  | B -> seq { a : 0 words, c : 2 words }
+}
+

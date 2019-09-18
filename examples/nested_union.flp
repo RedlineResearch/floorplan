@@ -1,0 +1,10 @@
+// Parser test: union in various places (both in a flake and in a field)
+
+Block -> union {
+    A ->  seq {
+              a : union { 1 words | 1 words }
+            , b : 2^2 words
+          }
+  | B -> seq { a : 0 words, c : (2^4) words }
+}
+

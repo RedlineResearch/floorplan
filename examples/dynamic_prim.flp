@@ -1,0 +1,7 @@
+// Parser test: dynamic primitive in arithmetic
+
+Seq -> seq {
+  a : # bytes,
+  b : 1 bytes
+}
+

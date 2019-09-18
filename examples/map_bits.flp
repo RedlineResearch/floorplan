@@ -1,0 +1,7 @@
+// Compiler test: mapping bits to bits code gen
+
+Foo<count> -> seq {
+  count bytes,
+  count Bar ||2 bytes|| -> 2 bytes
+}
+

@@ -1,0 +1,63 @@
+name:                flp
+version:             0.1.0.0
+github:              "RedlineResearch/floorplan"
+license:             BSD3
+author:              "Karl Cronburg"
+maintainer:          "karl@cs.tufts.edu"
+copyright:           "2019 Karl Cronburg"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Library
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/cronburg/flp#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- array >= 0.5.3.0
+- template-haskell
+- language-rust
+- th-lift
+- containers
+
+library:
+  source-dirs: src
+
+build-tools:
+- alex
+- happy
+
+executables:
+  flp:
+    source-dirs: app
+    main: floorplan.hs
+    dependencies:
+      - flp
+  sem:
+    source-dirs: app
+    main: semantics.hs
+    dependencies:
+      - flp
+      - pretty-simple
+
+tests:
+  parser:
+    main: Main.hs
+    source-dirs: test/parser
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - flp
+    - test-framework >= 0.8
+    - test-framework-hunit >= 0.3
+    - HUnit >= 1.6
+

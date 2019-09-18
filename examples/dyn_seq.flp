@@ -1,0 +1,7 @@
+// Parser test: dynamic sequence with fixed-width fields.
+
+Seq ||2 bytes|| @(2 bytes)@ -> # seq {
+  a : 1 bytes,
+  b : 1 bytes
+}
+

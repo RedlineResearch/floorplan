@@ -1,0 +1,7 @@
+// Parser test: arithmetic expressions with identifiers
+
+Block<n, k> -> union {
+    A -> seq { a : 0 words, b : n words }
+  | B -> seq { a : n words, c : k words }
+}
+

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+for f in `cat features`; do
+  echo $f
+  cargo run --release --features "$f"
+done
+

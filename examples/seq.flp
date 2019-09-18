@@ -1,0 +1,7 @@
+// Parser test: basic sequence with fixed-width fields.
+
+Seq -> seq {
+  a : Oops,
+  b : Oops ptr
+}
+

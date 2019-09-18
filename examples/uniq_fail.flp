@@ -1,0 +1,13 @@
+
+Outer -> seq {
+  foo : 1 words,
+  bar : 2 words,
+  Inner -> seq {
+    Outer -> 2 words
+  }
+}
+
+Other -> seq {
+  foo : 2 words
+}
+
