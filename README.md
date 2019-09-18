@@ -48,7 +48,7 @@ a memory manager other than immix-rust.
 A customized version of the [language-rust](https://github.com/harpocrates/language-rust)
 package is included in the `deps/` directory of this repo, which adds support for
 directly splicing of host language expressions into quasiquoted Rust code. This is the
-mechanism by which Floorplan-generated code
+mechanism by which Floorplan generates Rust code.
 
 ## Testing and contributing
 
