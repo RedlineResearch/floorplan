@@ -99,6 +99,7 @@ parseSuite = testGroup "parsing suite"
   , testParses "examples/nested.flp"
   , testParses "examples/nested_union.flp"
   , testParses "examples/app.flp"
+  , testParses "examples/parens.flp"
   , testParsesExp "examples/arith.flp" theLayer
   ]
 

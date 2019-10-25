@@ -167,7 +167,8 @@ factor   : factor '^' exponent  { Exponent $1 $3 }
 exponent : '(' litArith ')'     { $2 }
          |     literal          { Lit $1 }
 
-sizeArith : sizeArith '+' termSz  { SizePlus $1 $3 }
+sizeArith : '(' sizeArith ')'     { $2 }
+          | sizeArith '+' termSz  { SizePlus $1 $3 }
           | sizeArith '-' termSz  { SizeMinus $1 $3 }
           | termSz                { $1}
 

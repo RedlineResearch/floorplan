@@ -24,7 +24,7 @@ import Data.Typeable      ( Typeable )
 import Data.List          ( foldl' )
 import Data.Char          ( ord )
 import Data.String        ( IsString(..) )
-import Data.Semigroup as Sem
+--import Data.Semigroup as Sem
 
 -- | An identifier
 data Ident
