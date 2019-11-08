@@ -7,7 +7,7 @@ for garbage collectors and manual memory managers written in Rust.
 
 Floorplan is written in Haskell and must be [built with stack](https://docs.haskellstack.org/en/stable/README/).
 Once you have stack installed on your system, you should be able to run the build
-command and everything should Just Work&trade;:
+command and everything should just work:
 
 ```bash
 $ stack build
@@ -25,6 +25,10 @@ $ ./build-immix
    Finished dev [unoptimized + debuginfo] target(s) in 4.56s
 ```
 
+This script ensures the Floorplan compiler is built, installs it for your current
+user, and then builds the Immix project which itself invokes the Floorplan compiler
+to build the file `examples/immix/src/heap/layout.flp`.
+
 In order to run the compiler against some other `.flp` file, the compiler can
 be run directly as follows:
 
@@ -33,15 +37,14 @@ stack exec flp [path/to/layout.flp] [path/to/generated.rs]
 ```
 
 Note that in order to subsequently build a Rust file generated in this manner,
-you must modify the two files `examples/immix/src/heap/flp/{address,mod}.rs`
-accordingly and place them in the same directory as the generated file.
-`mod.rs` contains a number of macros for satisfying various traits on
-generated address types, and the `address.rs` file defines some primitive
-address types (bytes, words, void).
+you must include the `flp-framework` to your Cargo dependencies, and `flp-compiler`
+to your cargo build-dependencies. The later is simply a wrapper for calling out
+to the (already stack-installed) flp compiler, and the framework crate contains
+necessary macros and address types that generated Rust code uses.
 
-Instead, the skeleton of a Rust cargo project is given in the `gen/` directory
-of this repo, which can be copied over and modified to support the needs of
-a memory manager other than immix-rust.
+The skeleton of a Rust cargo project is given in the `gen/` directory of this
+repo, which can be copied over and modified to support the needs of a memory
+manager other than immix-rust.
 
 ## Dependencies
 
@@ -74,4 +77,5 @@ exist, including but not limited to:
 - Generate cargo-based Rust documentation alongside generated functions, indicating
   why a certain function was generated and how it might be used.
 - Repairing the Coq proofs in the `proofs/*.v` files.
+- Better Rust integration and downstream crates.
 

@@ -1,9 +1,6 @@
 #![allow(dead_code)]
 use std::mem;
 use std::marker::Sized;
-use std::cmp::Ordering;
-
-pub extern crate backtrace;
 
 pub trait Address: PartialOrd + Copy + Sized { //where Self: Sized {
     #[inline(always)] fn as_usize(&self) -> usize;
@@ -46,6 +43,7 @@ pub trait Address: PartialOrd + Copy + Sized { //where Self: Sized {
 }
 
 #[allow(unused_macros)]
+#[macro_export]
 macro_rules! deriveAddrSized {
     ( $addr:ident, $addrSized:ident ) => {
 
@@ -67,11 +65,12 @@ macro_rules! deriveAddrSized {
     };
 }
 
+#[macro_export]
 macro_rules! deriveAddrReqs {
     ( $addr:ident ) => {
 
         impl Ord for $addr {
-            #[inline(always)] fn cmp(&self, other: &$addr) -> Ordering {
+            #[inline(always)] fn cmp(&self, other: &$addr) -> cmp::Ordering {
                 self.as_usize().cmp(& other.as_usize())
             }
         }
@@ -116,6 +115,7 @@ macro_rules! deriveAddrReqs {
     };
 }
 
+#[macro_export]
 macro_rules! deriveAddrTrait {
     ( $addr:ident, $align:expr ) => {
         impl Address for $addr {
@@ -137,6 +137,7 @@ macro_rules! deriveAddrTrait {
     };
 }
 
+#[macro_export]
 macro_rules! deriveAddr {
     ( $addr:ident, $align:expr ) => {
         deriveAddrReqs!($addr);
@@ -144,30 +145,6 @@ macro_rules! deriveAddr {
     };
 }
 
-macro_rules! backtraceHere {
-    ( $val:expr ) => {
-        {   use std::fmt::Write;
-            use heap::flp::backtrace::Symbol;
-            let bt = &backtrace::Backtrace::new();
-            let frames_count = bt.frames().len();
-            let frames = &bt.frames();
-            for i in 2..frames_count {
-                let symb = &frames[i].symbols()[0];
-                if let Some(name) = symb.name() {
-                    if let Some(ln) = symb.lineno() {
-						let mut output = String::new();
-						let _ = write!(&mut output, "{}", name);
-                        if output.starts_with("std::rt") { break; }
-                        eprintln!("    {}:{}] = 0x{:X}", name, ln, $val);
-                    }
-                }
-            }
-        }
-    };
-}
-
 pub mod address;
-pub use self::address::*;
-pub mod generated;
-pub use self::generated::*;
+pub use address::*;
 

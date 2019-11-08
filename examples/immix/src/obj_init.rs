@@ -4,7 +4,7 @@ use heap;
 use heap::immix::ImmixMutatorLocal;
 use heap::immix::ImmixSpace;
 use heap::freelist::FreeListSpace;
-use heap::flp::*;
+use heap::layout::*;
 
 use std::sync::RwLock;
 use std::sync::{Arc};

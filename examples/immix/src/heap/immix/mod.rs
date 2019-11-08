@@ -8,7 +8,7 @@ pub use self::immix_space::LineMarkTable as ImmixLineMarkTable;
 pub use self::immix_mutator::MUTATORS;
 pub use self::immix_mutator::N_MUTATORS;
 
-pub use heap::flp::*;
+pub use heap::layout::*;
 
 use std::sync::Arc;
 use std::sync::RwLock;

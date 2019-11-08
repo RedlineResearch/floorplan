@@ -1,3 +1,4 @@
+Cargo.lock
 /*.lock
 .stack-work/
 flp.cabal

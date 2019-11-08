@@ -5,7 +5,7 @@
 #![allow(unused_assignments)]
 
 use heap;
-use heap::flp::*;
+use heap::layout::*;
 use heap::immix::ImmixMutatorLocal;
 use heap::immix::ImmixSpace;
 use heap::freelist::FreeListSpace;
@@ -33,7 +33,7 @@ fn alloc<Type>(numP: usize, typ: u8) -> *mut Type {
     let ret = obj_addr.to_ptr_mut::<Type>();
     //for i in 0..sz {
     //    check_expect_pc!(obj_addr.as_usize() + i, vec![__FLP_IDX_CELL]);
-    //    unsafe { flp::pc::set_bits(0, (obj_addr.as_usize() + i) as *const libc::c_void, typ); }
+    //    unsafe { layout::pc::set_bits(0, (obj_addr.as_usize() + i) as *const libc::c_void, typ); }
     //}
     ret
 }
@@ -62,7 +62,7 @@ pub fn get_bwd(n: *mut Node) -> *mut Node { unsafe {
 
 pub fn trash_it(n: *mut Node) {
     //for i in 0 .. size_of::<Node>() {
-    //    unsafe { flp::pc::set_bits(0, ((n as usize) + i) as *const libc::c_void, __FLP_IDX_GARBAGE); }
+    //    unsafe { layout::pc::set_bits(0, ((n as usize) + i) as *const libc::c_void, __FLP_IDX_GARBAGE); }
     //}
 }
 
@@ -143,6 +143,6 @@ pub fn start() {
 
     }
     println!("Finished!");
-    //flp::dump_map()
+    //layout::dump_map()
 }
 

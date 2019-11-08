@@ -1,8 +1,7 @@
-mod heap;
-use heap::flp::*;
+mod layout;
+use layout::*;
 
 fn main() {
-    println!("Hello, world!");
-    println!("{}\n", CellAddr::PTR_3_OFFSET_BYTES);
+    print!("Hello, world: {}\n", BYTES_IN_HELLORUST);
 }
 

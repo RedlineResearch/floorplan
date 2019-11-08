@@ -24,7 +24,7 @@ use heap::immix::ImmixMutatorLocal;
 use heap::freelist;
 use heap::freelist::FreeListSpace;
 use std::boxed::Box;
-use heap::flp::*;
+use heap::layout::*;
 
 #[repr(C)]
 pub struct GC {

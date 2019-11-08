@@ -4,7 +4,7 @@
 #![allow(unused_variables)]
 
 use heap;
-use heap::flp::*;
+use heap::layout::*;
 use heap::immix::ImmixMutatorLocal;
 use heap::immix::ImmixSpace;
 use heap::freelist::FreeListSpace;
@@ -98,7 +98,7 @@ fn alloc<Type>(numP: usize, typ: u8) -> *mut Type {
     let ret = obj_addr.to_ptr_mut::<Type>();
     //for i in 0..sz {
     //    check_expect_pc!(obj_addr.as_usize() + i, vec![__FLP_IDX_CELL]);
-    //    unsafe { flp::pc::set_bits(0, (obj_addr.as_usize() + i) as *const libc::c_void, typ); }
+    //    unsafe { heap::pc::set_bits(0, (obj_addr.as_usize() + i) as *const libc::c_void, typ); }
     //}
     if PRINT { eprint!("Allocated 0x{:X}", obj_addr.as_usize()); }
     //if obj_addr.as_usize() == 0x7FFFF73F0208 {
@@ -189,7 +189,7 @@ pub fn cleanup_llnode(node: *mut LLNode) {
         curr.set_val(0xdeadFAFA as usize);
         
 //        for i in 0..(size_of::<LLNode>()) {
-//            unsafe { flp::pc::set_bits(0, ((curr as usize) + i) as *const libc::c_void, __FLP_IDX_GARBAGE); }
+//            unsafe { heap::pc::set_bits(0, ((curr as usize) + i) as *const libc::c_void, __FLP_IDX_GARBAGE); }
 //        }
         
         if tmp == curr { break; }
@@ -210,7 +210,7 @@ pub fn cleanup_qnode(node: *mut QNode) {
         nxt(curr, 0x0 as *mut QNode);
 
         //for i in 0..(size_of::<QNode>()) {
-        //    unsafe { flp::pc::set_bits(0, ((curr as usize)+ i) as *const libc::c_void, __FLP_IDX_GARBAGE); }
+        //    unsafe { heap::pc::set_bits(0, ((curr as usize)+ i) as *const libc::c_void, __FLP_IDX_GARBAGE); }
         //}
 
         if tmp == curr { break; }
@@ -222,7 +222,7 @@ pub fn cleanup_qnode(node: *mut QNode) {
 pub fn pop(queue: *mut Dequeue) -> *mut QNode {
     let tmp = queue.fst(); // grab the first thing
     //if (tmp as usize) < 0xffffff {
-        //flp::dump_map();
+        //heap::dump_map();
     //}
     //if (tmp as usize) > 0xffffff && ((*(*queue).fst).nxt as usize) < 0xffffff {
     //    dump_map!();

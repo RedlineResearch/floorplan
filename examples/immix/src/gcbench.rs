@@ -5,7 +5,7 @@
 #![allow(unused_variables)]
 
 use heap;
-use heap::flp::*;
+use heap::layout::*;
 use heap::immix::ImmixMutatorLocal;
 use heap::immix::ImmixSpace;
 use heap::freelist;

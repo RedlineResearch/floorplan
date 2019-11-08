@@ -1,8 +1,10 @@
 use std::sync::atomic::AtomicUsize;
+#[macro_use]
+pub mod debug;
 
 #[macro_use]
-pub mod flp;
-use self::flp::*;
+pub mod layout;
+use self::layout::*;
 
 pub mod immix;
 pub mod freelist;

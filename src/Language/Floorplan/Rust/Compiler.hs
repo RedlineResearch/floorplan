@@ -887,11 +887,13 @@ genNeighborParents bes = let
   #![allow(unused_imports)]
   #![allow(unused_variables)]
   extern crate libc;
+  extern crate flp_framework;
   use std::cmp;
   use std::fmt;
   use std::mem::size_of as size_of;
   use self::libc::size_t as size_t;
-  use super::*;
+  
+  pub use self::flp_framework::*;
 |]
 --  #[macro_use]
 --  pub mod address;

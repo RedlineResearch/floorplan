@@ -4,7 +4,7 @@ use heap::immix::immix_space::ImmixBlock;
 use heap::gc;
 use objectmodel;
 
-use heap::flp::*;
+use heap::layout::*;
 
 use std::*;
 use std::sync::Arc;
@@ -196,7 +196,7 @@ impl ImmixMutatorLocal {
         let cell_size : Cell_sizeAddr = addr.cell_size();
 //        for i in 0..BYTES_IN_WORD {
 //            check_expect_pc!(cell_size.as_usize() + i, vec![__FLP_IDX_CELL]);
-//            unsafe { flp::pc::set_bits(0, (cell_size.as_usize() + i) as *const libc::c_void, __FLP_IDX_CELL_SIZE); } // Mark this memory as containing a Cell_size
+//            unsafe { layout::pc::set_bits(0, (cell_size.as_usize() + i) as *const libc::c_void, __FLP_IDX_CELL_SIZE); } // Mark this memory as containing a Cell_size
 //        }
         cell_size.store_word(size);
     }
@@ -210,7 +210,7 @@ impl ImmixMutatorLocal {
 //                println!("I was looking at ObjectAddr {}, CellAddr {}", obj_addr, cell_addr);
 //                dump_map!();
 //            });
-//        unsafe { flp::pc::set_bits(0, ref_bits_a.as_usize() as *const libc::c_void, __FLP_IDX_REFBITS); } // Mark this (single byte) as containing a RefBits
+//        unsafe { layout::pc::set_bits(0, ref_bits_a.as_usize() as *const libc::c_void, __FLP_IDX_REFBITS); } // Mark this (single byte) as containing a RefBits
         objectmodel::set_ref_byte(self.alloc_map, self.space_start, obj_addr, RefBits::set_REF_from_u8(encode));
         //Word2RefBits::map_set(self.space_start.get_first_word(), self.alloc_map, cell_addr.get_first_word(), RefBits::set_REF_from_u8(encode))
     }

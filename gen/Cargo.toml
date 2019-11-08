@@ -5,13 +5,13 @@ authors = ["Karl Cronburg <karl.cronburg@gmail.com>"]
 build = "build.rs"
 
 [build-dependencies]
-cc = "1.0"
+flp-compiler = { path = "../flp-compiler" }
 
 [[bin]]
 name = "main"
 path = "src/main.rs"
 
 [dependencies]
-libc = "0.2"
-backtrace = "0.2"
+flp-framework = { path = "../flp-framework" }
+libc = "0.2.2"
 

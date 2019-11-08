@@ -4,7 +4,7 @@ use std::sync::atomic::Ordering;
 
 pub static MARK_STATE : atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
-use heap::flp::*;
+use heap::layout::*;
 
 pub fn init() {
     MARK_STATE.store(1, atomic::Ordering::SeqCst);

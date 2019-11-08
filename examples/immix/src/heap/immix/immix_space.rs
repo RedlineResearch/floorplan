@@ -1,7 +1,7 @@
 use heap::immix;
 use heap::gc;
 
-use heap::flp::*;
+use heap::layout::*;
 
 extern crate std;
 extern crate memmap;
@@ -170,11 +170,11 @@ impl ImmixSpace {
         };
         let mptr = anon_mmap.ptr();
 //        unsafe {
-//            flp::pc::permcheck_init_maps(1, ptr::null());
-//            flp::pc::set_bits(0, mptr as *const libc::c_void, 0b11110011);
-//            debug_assert!(flp::pc::get_bits(0, mptr as *const libc::c_void, 0) == 0b11110011);
-//            //println!("get_bits: {}", flp::pc::get_bits(0, mptr as *const libc::c_void, 0));
-//            flp::pc::set_bits(0, mptr as *const libc::c_void, 0b00000000);
+//            layout::pc::permcheck_init_maps(1, ptr::null());
+//            layout::pc::set_bits(0, mptr as *const libc::c_void, 0b11110011);
+//            debug_assert!(layout::pc::get_bits(0, mptr as *const libc::c_void, 0) == 0b11110011);
+//            //println!("get_bits: {}", layout::pc::get_bits(0, mptr as *const libc::c_void, 0));
+//            layout::pc::set_bits(0, mptr as *const libc::c_void, 0b00000000);
 //        }
         let start : RegionAddr = RegionAddr::from_ptr::<u8>(mptr).align_up(SPACE_ALIGN);
         start.shadow_alloc_from(total - SPACE_ALIGN, vec![ __FLP_IDX_UNMAPPED ]);
@@ -312,10 +312,10 @@ impl ImmixSpace {
 //                                    cur_line_mark_table.dump();
 //                                    dump_map!();
 //                                });
-//                            unsafe { flp::pc::set_bits(0, (line_addr.as_usize() + j) as *const libc::c_void, __FLP_IDX_FREECELL); }
+//                            unsafe { layout::pc::set_bits(0, (line_addr.as_usize() + j) as *const libc::c_void, __FLP_IDX_FREECELL); }
 //                            
 //                            check_expect_pc!(ref_bits_a.as_usize(), vec![__FLP_IDX_REFS, __FLP_IDX_REFBITS]);
-//                            unsafe { flp::pc::set_bits(0, ref_bits_a.as_usize() as *const libc::c_void, __FLP_IDX_REFS); }
+//                            unsafe { layout::pc::set_bits(0, ref_bits_a.as_usize() as *const libc::c_void, __FLP_IDX_REFS); }
 //
 //                            // null-out so it doesn't get re-scanned (this was a memory leak /
 //                            // bug in the original version).

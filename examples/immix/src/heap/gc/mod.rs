@@ -6,7 +6,7 @@ use heap::immix::ImmixLineMarkTable;
 use heap::freelist::FreeListSpace;
 use objectmodel;
 
-use heap::flp::*;
+use heap::layout::*;
 
 use std::sync::atomic::{AtomicUsize, AtomicIsize, Ordering};
 use std::sync::{Arc, Mutex, Condvar, RwLock};
@@ -154,7 +154,7 @@ pub fn stack_scan() -> Vec<ObjectAddr> {
     println!("unique roots: {}", ret.len());
 //    for root in ret.iter() { unsafe {
 //        // CellAddr
-//        let typ = flp::pc::get_bits(0, root.as_usize() as *const libc::c_void, 0);
+//        let typ = layout::pc::get_bits(0, root.as_usize() as *const libc::c_void, 0);
 //        println!("root(0x{:X}) : {}", root, __FLP_TYPES[typ as usize]);
 //    }}
     ret

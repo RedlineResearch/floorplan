@@ -1,4 +1,4 @@
-use heap::flp::*;
+use heap::layout::*;
 use heap::immix;
 
 extern crate aligned_alloc;

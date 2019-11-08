@@ -1,7 +1,7 @@
 extern crate time;
 
 use heap;
-use heap::flp::*;
+use heap::layout::*;
 use heap::immix::ImmixMutatorLocal;
 use heap::immix::ImmixSpace;
 use heap::freelist::FreeListSpace;

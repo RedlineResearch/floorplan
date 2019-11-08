@@ -183,15 +183,15 @@ impl Address for ByteAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    extern crate libc;
 
-    #[test]
-    pub fn test_u8_bits() {
-        let value : u8 = 0b000011_11;
-
-        assert_eq!(test_nth_bit(value, 6), true);
-
-        assert_eq!(lower_bits(value, 6), 0b00_0011);
-    }
+    pub const VAL : u8 = 0b000011_11;
+    #[test] pub fn v0() { assert_eq!(test_nth_bit(VAL, 0), true); }
+    #[test] pub fn v1() { assert_eq!(test_nth_bit(VAL, 1), true); }
+    #[test] pub fn v2() { assert_eq!(test_nth_bit(VAL, 2), true); }
+    #[test] pub fn v3() { assert_eq!(test_nth_bit(VAL, 3), true); }
+    #[test] pub fn v4() { assert_eq!(test_nth_bit(VAL, 4), false); }
+    #[test] pub fn v5() { assert_eq!(test_nth_bit(VAL, 5), false); }
+    #[test] pub fn v6() { assert_eq!(test_nth_bit(VAL, 6), false); }
+    #[test] pub fn v7() { assert_eq!(test_nth_bit(VAL, 7), false); }
 }
 

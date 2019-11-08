@@ -1,0 +1,7 @@
+[package]
+name = "flp-framework"
+version = "0.1.0"
+authors = ["Karl Cronburg <karl.cronburg@gmail.com>"]
+
+[dependencies]
+
