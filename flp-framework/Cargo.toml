@@ -2,6 +2,11 @@
 name = "flp-framework"
 version = "0.1.0"
 authors = ["Karl Cronburg <karl.cronburg@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/RedlineResearch/floorplan"
+homepage = ""
+readme = "README.md"
+description = "Floorplan, a memory layout specification language, code-generation necessities."
 
 [dependencies]
 
