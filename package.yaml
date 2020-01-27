@@ -1,18 +1,41 @@
 name:                flp
 version:             0.1.0.0
 github:              "RedlineResearch/floorplan"
-license:             BSD3
+license:             MIT
 author:              "Karl Cronburg"
 maintainer:          "karl@cs.tufts.edu"
 copyright:           "2019 Karl Cronburg"
 
 extra-source-files:
 - README.md
+- LICENSE
+- LICENSE.language-rust
 - ChangeLog.md
+- examples/app.flp
+- examples/arith.flp
+- examples/arith_id.flp
+- examples/arith_power.flp
+- examples/bits.flp
+- examples/bump.flp
+- examples/dynamic_prim.flp
+- examples/dyn_choice.flp
+- examples/dyn_seq.flp
+- examples/empty.flp
+- examples/enum_bad0.flp
+- examples/enum.flp
+- examples/layer.flp
+- examples/map_bits.flp
+- examples/named_ref.flp
+- examples/nested.flp
+- examples/nested_union.flp
+- examples/parens.flp
+- examples/seq.flp
+- examples/union.flp
+- examples/uniq_fail.flp
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Library
+synopsis:            A layout spec language for memory managers implemented in Rust.
+category:            Compiler
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is

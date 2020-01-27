@@ -186,11 +186,11 @@ genMaps bes =
                         toStart.offset::<$toName, $toNameAddr>(idxV).load()
                       }
                     |]
-                    {- #[inline(always)]
-                      let result = 3; //${e|idxExpr|};
-                      debug_assert!(((elem.as_usize() - base.as_usize()) % (${e| mkIntExp sz1 |})) == 0);
-                      result
-                    } -}
+                    -- #[inline(always)]
+                    --  let result = 3; //${e|idxExpr|};
+                    --  debug_assert!(((elem.as_usize() - base.as_usize()) % (${e| mkIntExp sz1 |})) == 0);
+                    --  result
+                    --
               in [ RustImpl tsfm innerItems assocItems ]
 
         in concatMap mkMF $ D.traceShowId $ allPairs n e

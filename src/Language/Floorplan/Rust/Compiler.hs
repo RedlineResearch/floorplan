@@ -89,14 +89,14 @@ findAlignment :: BaseExp -> [Int]
 findAlignment (Prim{})      = [1]
 findAlignment (Con _ e)     = findAlignment e
 findAlignment (_ :@ align)  = [align]
-findAlignment (e :+ _)      = findAlignment e -- ^ Alignment of first thing
+findAlignment (e :+ _)      = findAlignment e -- Alignment of first thing
 findAlignment (e1 :|| e2)   =
   let a1 = findAlignment e1
       a2 = findAlignment e2
   in  a1 ++ a2
 findAlignment (_ ::: e)     = findAlignment e
 findAlignment (Exists _ e)  = findAlignment e
-findAlignment (_ :# e)      = findAlignment e -- ^ Alignment of first repetition
+findAlignment (_ :# e)      = findAlignment e -- Alignment of first repetition
 findAlignment (Attr _ e)    = findAlignment e
 
 -- | Generate the items associated with an Impl, as necessary for

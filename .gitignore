@@ -1,3 +1,4 @@
+/dist
 Cargo.lock
 /*.lock
 .stack-work/

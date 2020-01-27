@@ -10,16 +10,16 @@ pVersion=0.1.0.0
 # =============================================================================
 
 gzDir=$GITDIR/.stack-work/dist/$arch/Cabal-$cVersion
-gzFile=pads-haskell-$pVersion.tar.gz
+gzFile=flp-$pVersion.tar.gz
 
 echo "Changing to directory $GITDIR"
 cd "$GITDIR"
 
-# Generates .stack-work/dist/[arch]/Cabal-[version]/pads-haskell-[version].tar.gz :
+# Generates .stack-work/dist/[arch]/Cabal-[version]/flp-[version].tar.gz :
 echo "Generating $gzFile"
 stack sdist --pvp-bounds both
 
-# Generates .stack-work/dist/[arch]/Cabal-[version]/doc/html/pads-haskell/* :
+# Generates .stack-work/dist/[arch]/Cabal-[version]/doc/html/flp/* :
 echo "Generating haddock documentation"
 stack haddock --haddock-hyperlink-source
 
@@ -28,12 +28,12 @@ mkdir -p dist
 cp $gzDir/$gzFile dist/
 
 # Copy over the haddock documentation:
-destDir=dist/pads-haskell-$pVersion/pads-haskell-$pVersion-docs
+destDir=dist/flp-$pVersion/flp-$pVersion-docs
 mkdir -p $destDir
-cp -r $gzDir/doc/html/pads-haskell $destDir
+cp -r $gzDir/doc/html/flp $destDir
 
 # Generate tar file to upload to hackage:
-echo "Making haddock tar file for *manual* upload to https://hackage.haskell.org/package/pads-haskell-$pVersion/maintain/docs"
-tarFile=pads-haskell-$pVersion-docs.tar
+echo "Making haddock tar file for *manual* upload to https://hackage.haskell.org/package/flp-$pVersion/maintain/docs"
+tarFile=flp-$pVersion-docs.tar
 tar --format=ustar -cvf dist/$tarFile $destDir | grep index.html
 
