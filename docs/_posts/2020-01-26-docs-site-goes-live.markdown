@@ -10,7 +10,24 @@ found in the preprint of our accompanying conference paper [as available here][p
 For prospective users of the compiler, we recommend reading Section 3 of the paper as that
 provides a practical view of what type of code the compiler generates for you.
 
-Check back here later for updates on the availability of a crate on [crates.io](https://crates.io).
+# Installation
+
+The Floorplan compiler itself (Haskell project) must be installed from source
+with the `stack` toolchain like so:
+
+```bash
+git clone https://github.com/RedlineResearch/floorplan.git
+cd floorplan
+stack build
+stack install
+```
+
+Once this is done, and the `flp` executable from doing so is on your `$PATH`, you
+can write Floorplan-enabled Rust crates by adding the following two crates to
+your `Cargo.toml`:
+
+- [flp-framework-0.1.0](https://crates.io/crates/flp-framework/0.1.0) added to `[dependencies]`
+- [flp-compiler-0.1.0](https://crates.io/crates/flp-compiler/0.1.0) added to `[build-dependencies]`
 
 # The "Hello World" of Floorplan
 
