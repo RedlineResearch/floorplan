@@ -2,6 +2,8 @@
 
 name = "immix_rust"
 version = "0.0.1"
+
+# Original author shown here:
 authors = [ "Yi Lin <yi.lin@anu.edu.au>" ]
 build = "build.rs"
 

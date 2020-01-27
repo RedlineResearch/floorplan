@@ -23,7 +23,7 @@ email: karl@cs.tufts.edu
 description: >- # this means to ignore newlines until "baseurl:"
   A language for specifying the layout of a one-dimensional address space,
   for garbage collectors and manual memory managers written in Rust.
-baseurl: "/floorplan" # the subpath of your site, e.g. /blog
+baseurl: "/" # the subpath of your site, e.g. /blog
 url: "redlineresearch.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 #twitter_username: jekyllrb
 github_username:  RedlineResearch

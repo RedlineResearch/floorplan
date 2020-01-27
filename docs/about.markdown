@@ -11,5 +11,5 @@ members of the [Tufts Programming Languages][tupl-link] research group.
 ![Floorplan Info](./floorplan-info.svg)
 
 [redline-research]: http://www.cs.tufts.edu/research/redline/
-[tupl-link]: https://tupl.cs.tufts.edu/w
+[tupl-link]: https://tupl.cs.tufts.edu/
 
