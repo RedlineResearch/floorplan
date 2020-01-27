@@ -2,6 +2,9 @@
 name = "flp-compiler"
 version = "0.1.0"
 authors = ["Karl Cronburg <karl.cronburg@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/RedlineResearch/floorplan"
+homepage = "https://redlineresearch.github.io/floorplan/"
 
 [dependencies]
 
