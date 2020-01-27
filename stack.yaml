@@ -3,8 +3,9 @@
 
 #resolver: lts-13.12
 #resolver: lts-13.29
-resolver: lts-14.6
+#resolver: lts-14.6
 #resolver: lts-11.14
+resolver: lts-14.21
 
 packages:
 - .
@@ -17,7 +18,7 @@ packages:
   #  git: https://github.com/harpocrates/language-rust
   #  commit: d32e57f
   #extra-dep: true
-- ./deps/language-rust
+#- ./deps/language-rust
 
 extra-deps: []
 flags: {}
