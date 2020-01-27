@@ -30,6 +30,7 @@ github_username:  RedlineResearch
 
 # Build settings
 theme: minima
+#theme: jekyll-theme-slate
 plugins:
   - jekyll-feed
 
