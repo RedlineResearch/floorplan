@@ -5,6 +5,7 @@ authors = ["Karl Cronburg <karl.cronburg@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/RedlineResearch/floorplan"
 homepage = "https://redlineresearch.github.io/floorplan/"
+description = "Floorplan, a memory layout specification language, compiler binding for Rust."
 
 [dependencies]
 
