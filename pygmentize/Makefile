@@ -13,7 +13,7 @@ clean:
 	rm -rf $(PYG)/{build,dist,inst}
 
 $(PYG):
-	git clone --branch 2.5.0 https://github.com/pygments/pygments.git
+	git clone --branch 2.2.0 https://github.com/pygments/pygments.git
 
 $(PYG)/pygments/lexers/floorplan.py: floorplan.py $(PYG)
 	cp $< $@
