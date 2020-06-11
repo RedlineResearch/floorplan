@@ -304,7 +304,7 @@ pub fn start() {
     unsafe { mutator = Box::into_raw(Box::new(ImmixMutatorLocal::new(immix_space.clone()))); }
 
     println!("Leak GC test");
-    let tStart = time::now_utc();
+    let tStart = time::Instant::now();
     let mut i = 0;
     let ll = build_ll(6363, 6363 + 3000);
     let first : *mut QNode = mk_qnode(ll);

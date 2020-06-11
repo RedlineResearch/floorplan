@@ -11,6 +11,7 @@ use std::*;
 use std::collections::LinkedList;
 use std::sync::Mutex;
 use std::sync::Arc;
+use self::memmap::MmapOptions;
 
 // this table will be accessed through unsafe raw pointers. since Rust doesn't provide a data structure for such guarantees:
 // 1. Non-overlapping segments of this table may be accessed parallelly from different mutator threads
@@ -141,7 +142,7 @@ pub struct ImmixSpace {
     total_blocks     : usize,  // for debug use
 
     #[allow(dead_code)]
-    mmap             : memmap::Mmap,
+    mmap             : memmap::MmapMut,
     usable_blocks    : Mutex<LinkedList<Box<ImmixBlock>>>,
     used_blocks      : Mutex<LinkedList<Box<ImmixBlock>>>,
 }
@@ -164,11 +165,13 @@ impl ImmixSpace {
         let alloc_map_size = mem::size_of::<RefBits>()  * (space_size >> LOG_BYTES_IN_WORD);
         let line_mark_table_size = mem::size_of::<LineMark>() * (space_size >> LOG_BYTES_IN_LINE);
         let total = SPACE_ALIGN + space_size + line_mark_table_size + trace_map_size + alloc_map_size;
-        let anon_mmap : memmap::Mmap = match memmap::Mmap::anonymous(total, memmap::Protection::ReadWrite) {
+        
+        let anon_mmap : memmap::MmapMut = match MmapOptions::new().len(total).map_anon() {
+        //let anon_mmap : memmap::Mmap = match memmap::Mmap::anonymous(total, memmap::Protection::ReadWrite) {
             Ok(m) => m,
             Err(_) => panic!("failed to call mmap"),
         };
-        let mptr = anon_mmap.ptr();
+        let mptr = anon_mmap.as_ptr();
 //        unsafe {
 //            layout::pc::permcheck_init_maps(1, ptr::null());
 //            layout::pc::set_bits(0, mptr as *const libc::c_void, 0b11110011);

@@ -49,13 +49,13 @@ pub fn alloc_init() {
 #[inline(never)]
 fn init_loop(objs: Vec<ObjectAddr>, mutator: &mut ImmixMutatorLocal) {
     println!("Start init objects");
-    let t_start = time::now_utc();
+    let t_start = time::Instant::now();
     
     for obj in objs {    
         mutator.init_object_no_inline(obj, 0b000011_11);
     }
     
-    let t_end = time::now_utc();
+    let t_end = time::Instant::now();
     
-    println!("time used: {} msec", (t_end - t_start).num_milliseconds());
+    println!("time used: {} msec", (t_end - t_start).whole_milliseconds());
 }

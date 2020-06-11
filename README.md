@@ -42,7 +42,7 @@ to your cargo build-dependencies. The later is simply a wrapper for calling out
 to the (already stack-installed) flp compiler, and the framework crate contains
 necessary macros and address types that generated Rust code uses.
 
-The skeleton of a Rust cargo project is given in the `gen/` directory of this
+The skeleton of a Rust cargo project is given in the `genrs/` directory of this
 repo, which can be copied over and modified to support the needs of a memory
 manager other than immix-rust.
 

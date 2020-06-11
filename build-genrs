@@ -1,13 +1,13 @@
 #!/bin/bash
 
-IMMIX="./examples/immix"
 
-#stack exec flp $IMMIX/layout.flp $IMMIX/src/heap/flp/generated.rs \
 stack build flp --ghc-options="-ddump-splices"
 if [ $? -eq 0 ]; then
   # Add the path of the executable built by stack to PATH instead of installing it:
   export PATH="$(pwd)/$(dirname $(find .stack-work -path */flp/flp)):$PATH"
-  (cd $IMMIX; cargo build --features "gcbench")
+  (cd genrs; cargo build)
 else
   echo "Failed to build FLP."
 fi
+#&& stack exec flp ./examples/immix/src/heap/layout.flp ./genrs/src/heap/flp/generated.rs \
+

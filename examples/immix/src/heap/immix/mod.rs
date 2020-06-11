@@ -17,9 +17,9 @@ lazy_static!{
     pub static ref SHARED_SPACE : Option<Arc<RwLock<ImmixSpace>>> = None;
 }
 
-pub const BYTES_IN_LINE      : usize = (1 << LOG_BYTES_IN_LINE);
-pub const BYTES_IN_BLOCK     : usize = (1 << LOG_BYTES_IN_BLOCK); 
-pub const LINES_IN_BLOCK     : usize = (1 << (LOG_BYTES_IN_BLOCK - LOG_BYTES_IN_LINE));
+pub const BYTES_IN_LINE      : usize = 1 << LOG_BYTES_IN_LINE;
+pub const BYTES_IN_BLOCK     : usize = 1 << LOG_BYTES_IN_BLOCK; 
+pub const LINES_IN_BLOCK     : usize = 1 << (LOG_BYTES_IN_BLOCK - LOG_BYTES_IN_LINE);
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum LineMark {

@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex, Condvar, RwLock};
 extern crate crossbeam;
 
 #[cfg(feature = "mt-trace")]
-use self::crossbeam::sync::chase_lev::*;
+use self::crossbeam::deque::*;
 #[cfg(feature = "mt-trace")]
 use std::sync::mpsc;
 #[cfg(feature = "mt-trace")]
@@ -29,7 +29,7 @@ lazy_static! {
         Arc::new((Mutex::new(0), Condvar::new()))
     };
 
-    static ref GET_ROOTS : RwLock<Box<Fn()->Vec<ObjectAddr> + Sync + Send>> = RwLock::new(Box::new(get_roots));
+    static ref GET_ROOTS : RwLock<Box<dyn Fn()->Vec<ObjectAddr> + Sync + Send>> = RwLock::new(Box::new(get_roots));
 
     static ref GC_CONTEXT : RwLock<GCContext> = RwLock::new(GCContext{immix_space: None, lo_space: None});
 
@@ -55,7 +55,7 @@ pub fn init(immix_space: Arc<ImmixSpace>, lo_space: Arc<RwLock<FreeListSpace>>) 
     gccontext.lo_space = Some(lo_space);
 }
 
-pub fn init_get_roots(get_roots: Box<Fn()->Vec<ObjectAddr> + Sync + Send>) {
+pub fn init_get_roots(get_roots: Box<dyn Fn()->Vec<ObjectAddr> + Sync + Send>) {
     *GET_ROOTS.write().unwrap() = get_roots;
 }
 
@@ -285,7 +285,8 @@ pub static GC_THREADS : atomic::AtomicUsize = AtomicUsize::new(0);
 #[cfg(feature = "mt-trace")]
 pub fn start_trace(work_stack: &mut Vec<ObjectAddr>, immix_space: Arc<ImmixSpace>, lo_space: Arc<RwLock<FreeListSpace>>) {
     // creates root deque
-    let (mut worker, stealer) = deque();
+    let worker = Worker::new_fifo();
+    let stealer = worker.stealer();
 
     while !work_stack.is_empty() {
         worker.push(work_stack.pop().unwrap());
@@ -317,7 +318,7 @@ pub fn start_trace(work_stack: &mut Vec<ObjectAddr>, immix_space: Arc<ImmixSpace
             }
         }
 
-        match worker.try_pop() {
+        match worker.pop() {
             Some(obj_ref) => worker.push(obj_ref),
             None => break
         }
@@ -357,8 +358,8 @@ fn start_steal_trace(stealer: Stealer<ObjectAddr>, job_sender:mpsc::Sender<Objec
                 let work = stealer.steal();
                 match work {
                     Steal::Empty => return,
-                    Steal::Abort => continue,
-                    Steal::Data(obj) => obj
+                    Steal::Retry => continue,
+                    Steal::Success(obj) => obj
                 }
             }
         };
@@ -389,7 +390,7 @@ pub fn steal_trace_object
         // freelist mark
     }
 
-    let mut base = obj_addr;
+    let base = obj_addr;
     loop {
         let value : RefBits = objectmodel::get_ref_byte(alloc_map, immix_start, obj_addr);
         let (ref_bits, short_encode) = (value.get_REF_bits(), value.get_SHORT_ENCODE_bit());

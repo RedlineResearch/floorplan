@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Add the path of the executable built by stack to PATH instead of installing it:
+export PATH="$(pwd)/$(dirname $(find ../../.stack-work -path */flp/flp)):$PATH"
+cargo run --release --features "$@"
+

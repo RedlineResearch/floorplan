@@ -86,22 +86,22 @@ fn TimeConstruction(depth: i32, mutator: &mut ImmixMutatorLocal) {
     let iNumIters = NumIters(depth);
     println!("creating {} trees of depth {}", iNumIters, depth);
     
-    let tStart = time::now_utc();
+    let tStart = time::Instant::now();
     for _ in 0..iNumIters {
         let tempTree = alloc(mutator);
         Populate(depth, tempTree, mutator);
         
         // destroy tempTree
     }
-    let tFinish = time::now_utc();
-    println!("\tTop down construction took {} msec", (tFinish - tStart).num_milliseconds());
+    let tFinish = time::Instant::now();
+    println!("\tTop down construction took {} msec", (tFinish - tStart).whole_milliseconds());
     
-    let tStart = time::now_utc();
+    let tStart = time::Instant::now();
     for _ in 0..iNumIters {
         let tempTree = MakeTree(depth, mutator);
     }
-    let tFinish = time::now_utc();
-    println!("\tButtom up construction took {} msec", (tFinish - tStart).num_milliseconds());
+    let tFinish = time::Instant::now();
+    println!("\tButtom up construction took {} msec", (tFinish - tStart).whole_milliseconds());
 }
 
 fn run_one_test(immix_space: Arc<ImmixSpace>, lo_space: Arc<RwLock<FreeListSpace>>) {
@@ -158,7 +158,7 @@ pub fn start() {
     println!(" Stretching memory with a binary tree or depth {}", kStretchTreeDepth);
     PrintDiagnostics();
     
-    let tStart = time::now_utc();
+    let tStart = time::Instant::now();
     
     // Stretch the memory space quickly
     let tempTree = MakeTree(kStretchTreeDepth, &mut mutator);
@@ -198,8 +198,8 @@ pub fn start() {
         println!("Failed(long lived tree wrong)");
     }
     
-    let tFinish = time::now_utc();
-    let tElapsed = (tFinish - tStart).num_milliseconds();
+    let tFinish = time::Instant::now();
+    let tElapsed = (tFinish - tStart).whole_milliseconds();
     
     PrintDiagnostics();
     println!("Completed in {} msec", tElapsed);

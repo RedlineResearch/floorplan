@@ -24,13 +24,13 @@ pub trait Address: PartialOrd + Copy + Sized {
     ///
     /// *Accessing this function directly from [memory management code is
     /// unsupported](https://redlineresearch.github.io/floorplan/unsupported-operations)*
-    #[inline(always)] fn as_usize(&self) -> usize;
+    fn as_usize(&self) -> usize;
     
     /// An address can be decronstructed into a raw `usize` value.
     ///
     /// *Accessing this function directly from [memory management code is
     /// unsupported](https://redlineresearch.github.io/floorplan/unsupported-operations)*
-    #[inline(always)] fn from_usize(usize) -> Self;
+    fn from_usize(usize) -> Self;
     
     /// Does this address appear valid accoring to the layout / address type?
     ///
@@ -285,13 +285,13 @@ macro_rules! deriveAddrTrait {
         impl Address for $addr {
 
             /// Construct an address of this type from a raw `usize` value.
-            fn from_usize(val : usize) -> $addr { $addr(val) }
+            #[inline(always)] fn from_usize(val : usize) -> $addr { $addr(val) }
 
             /// Deconstruct this address into a raw `usize` value.
-            fn as_usize(&self) -> usize { self.0 }
+            #[inline(always)] fn as_usize(&self) -> usize { self.0 }
 
             /// Default verification of proper address alignment.
-            fn verify(self) -> bool { self.0 % ($align) == 0 }
+            #[inline(always)] fn verify(self) -> bool { self.0 % ($align) == 0 }
 
         }
 

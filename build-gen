@@ -1,6 +1,0 @@
-#!/bin/bash
-
-stack build flp --ghc-options="-ddump-splices" \
-  && stack exec flp ./examples/immix/layout.flp ./gen/src/heap/flp/generated.rs \
-  && (cd gen; cargo build)
-

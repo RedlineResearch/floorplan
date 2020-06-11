@@ -41,7 +41,7 @@ pub fn exhaust_alloc() {
 
 #[inline(never)]
 fn alloc_loop(mutator: &mut ImmixMutatorLocal) {
-    let t_start = time::now_utc();
+    let t_start = time::Instant::now();
     
     for _ in 0..ALLOCATION_TIMES {
 //        mutator.yieldpoint();
@@ -50,7 +50,7 @@ fn alloc_loop(mutator: &mut ImmixMutatorLocal) {
         mutator.init_object(res, 0b000011_11);  
     }
     
-    let t_end = time::now_utc();
+    let t_end = time::Instant::now();
     
-    println!("time used: {} msec", (t_end - t_start).num_milliseconds());;
+    println!("time used: {} msec", (t_end - t_start).whole_milliseconds());
 }

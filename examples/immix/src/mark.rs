@@ -52,7 +52,7 @@ fn mark_loop(objs: Vec<ObjectAddr>, shared_space: &Arc<ImmixSpace>) {
     use objectmodel;
     
     println!("Start marking");
-    let t_start = time::now_utc();
+    let t_start = time::Instant::now();
     
     let mark_state : MarkBits = MarkBits::set_MARK_from_u8(objectmodel::MARK_STATE.load(Ordering::SeqCst) as u8);
     
@@ -73,7 +73,7 @@ fn mark_loop(objs: Vec<ObjectAddr>, shared_space: &Arc<ImmixSpace>) {
         } 
     }
     
-    let t_end = time::now_utc();
+    let t_end = time::Instant::now();
     
-    println!("time used: {} msec", (t_end - t_start).num_milliseconds());
+    println!("time used: {} msec", (t_end - t_start).whole_milliseconds());
 }

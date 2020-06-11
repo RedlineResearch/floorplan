@@ -68,11 +68,11 @@ fn trace_loop(root: ObjectAddr, shared_space: Arc<ImmixSpace>, lo_space: Arc<RwL
     println!("Start tracing");
     let mut roots = vec![root];
 
-    let t_start = time::now_utc();
+    let t_start = time::Instant::now();
     
     heap::gc::start_trace(&mut roots, shared_space, lo_space);
     
-    let t_end = time::now_utc();
+    let t_end = time::Instant::now();
     
-    println!("time used: {} msec", (t_end - t_start).num_milliseconds());
+    println!("time used: {} msec", (t_end - t_start).whole_milliseconds());
 }

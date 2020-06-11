@@ -1,4 +1,4 @@
 #!/bin/bash
 
-(cd gen; cargo clean; rm -f src/heap/flp/generated.rs)
+(cd genrs; cargo clean; rm -f src/heap/flp/generated.rs)
 

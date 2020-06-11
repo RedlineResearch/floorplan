@@ -53,6 +53,9 @@ dependencies:
 - prettyprinter
 - transformers
 - haskell-src-meta
+- language-c-quote >= 0.12.2.1
+- mainland-pretty
+- text
 
 library:
   source-dirs: src
