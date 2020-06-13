@@ -67,19 +67,45 @@ free_vars d@(Layer{})        =
   , fv `notElem` formals d
   ]
 
+mTL :: Maybe a -> [a]
+mTL = maybeToList
+
 accum :: (Demarc -> Maybe a) -> Demarc -> [a]
-accum fn d@(Enum{})         = maybeToList (fn d)
-accum fn d@(Bits{})         = maybeToList (fn d)
-accum fn d@(Union ds)       = maybeToList (fn d) ++ concatMap (accum fn) ds
-accum fn d@(Seq ds)         = maybeToList (fn d) ++ concatMap (accum fn) ds
-accum fn d@(PtrF{})         = maybeToList (fn d)
-accum fn d@(PtrL{})         = maybeToList (fn d)
-accum fn d@(Blob{})         = maybeToList (fn d)
-accum fn d@(Graft{})        = maybeToList (fn d)
-accum fn f@(Field _ d)      = maybeToList (fn f) ++ accum fn d
-accum fn p@(Pound d)        = maybeToList (fn p) ++ accum fn d
-accum fn r@(Repetition _ d) = maybeToList (fn r) ++ accum fn d
-accum fn d@(Layer{})        = maybeToList (fn d) ++ accum fn (rhs d)
+accum fn d@(Enum{})         = mTL (fn d)
+accum fn d@(Bits{})         = mTL (fn d)
+accum fn d@(Union ds)       = mTL (fn d) ++ concatMap (accum fn) ds
+accum fn d@(Seq ds)         = mTL (fn d) ++ concatMap (accum fn) ds
+accum fn d@(PtrF{})         = mTL (fn d)
+accum fn d@(PtrL{})         = mTL (fn d)
+accum fn d@(Blob{})         = mTL (fn d)
+accum fn d@(Graft{})        = mTL (fn d)
+accum fn f@(Field _ d)      = mTL (fn f) ++ accum fn d
+accum fn p@(Pound d)        = mTL (fn p) ++ accum fn d
+accum fn r@(Repetition _ d) = mTL (fn r) ++ accum fn d
+accum fn d@(Layer{})        = mTL (fn d) ++ accum fn (rhs d)
+
+countDemarcNodes :: Demarc -> Int
+countDemarcNodes e = length $ accum (const $ Just ()) e
+
+accumTopDown' :: [a] -> ([a] -> Demarc -> Maybe a) -> Demarc -> [a]
+accumTopDown' as fn d@(Enum{})         = mTL (fn as d)
+accumTopDown' as fn d@(Bits{})         = mTL (fn as d)
+accumTopDown' as fn d@(Union ds)       = mTL (fn as d) ++ concatMap (accumTopDown' (mTL (fn as d) ++ as) fn) ds
+accumTopDown' as fn d@(Seq ds)         = mTL (fn as d) ++ concatMap (accumTopDown' (mTL (fn as d) ++ as) fn) ds
+accumTopDown' as fn d@(PtrF{})         = mTL (fn as d)
+accumTopDown' as fn d@(PtrL{})         = mTL (fn as d)
+accumTopDown' as fn d@(Blob{})         = mTL (fn as d)
+accumTopDown' as fn d@(Graft{})        = mTL (fn as d)
+accumTopDown' as fn f@(Field _ d)      = mTL (fn as f) ++ accumTopDown' (mTL (fn as f) ++ as) fn d
+accumTopDown' as fn p@(Pound d)        = mTL (fn as p) ++ accumTopDown' (mTL (fn as p) ++ as) fn d
+accumTopDown' as fn r@(Repetition _ d) = mTL (fn as r) ++ accumTopDown' (mTL (fn as r) ++ as) fn d
+accumTopDown' as fn d@(Layer{})        = mTL (fn as d) ++ accumTopDown' (mTL (fn as d) ++ as) fn (rhs d)
+
+-- | Accumulate the results of a function operating over each Demarc in the Demarc IR tree,
+--   where the function also takes a list of the results of the same function applied to
+--   each of the ancestors of the current Demarc IR node, with the list in order from least
+--   ancestor (closest) to greatest ancestor.
+accumTopDown = accumTopDown' []
 
 countMatches :: (Demarc -> Bool) -> Demarc -> Int
 countMatches fn demarc = length $ (flip accum) demarc $ \d -> if fn d then Just 1 else Nothing

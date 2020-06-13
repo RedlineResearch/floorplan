@@ -39,6 +39,26 @@ data BaseType
 --   (with contains(...) attibutes):
 type BaseExp = Exp (Attribute BaseType)
 
+mTL :: Maybe a -> [a]
+mTL = maybeToList
+
+accumTopDown' :: [a] -> ([a] -> Exp b -> Maybe a) -> Exp b -> [a]
+accumTopDown' as fn e@(Prim{})         = mTL (fn as e)
+accumTopDown' as fn e1@(Con _ e2)      = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2
+accumTopDown' as fn e1@(e2 :@ _)       = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2
+accumTopDown' as fn e1@(e2 :+ e3)      = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2 ++ accumTopDown' (mTL (fn as e1) ++ as) fn e3
+accumTopDown' as fn e1@(e2 :|| e3)     = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2 ++ accumTopDown' (mTL (fn as e1) ++ as) fn e3
+accumTopDown' as fn e1@(_ ::: e2)      = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2
+accumTopDown' as fn e1@(Exists _ e2)   = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2
+accumTopDown' as fn e1@(_ :# e2)       = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2
+accumTopDown' as fn e1@(Attr _ e2)     = mTL (fn as e1) ++ accumTopDown' (mTL (fn as e1) ++ as) fn e2
+
+-- | Accumulate the results of a function operating over each Demarc in the Demarc IR tree,
+--   where the function also takes a list of the results of the same function applied to
+--   each of the ancestors of the current Demarc IR node, with the list in order from least
+--   ancestor (closest) to greatest ancestor.
+accumTopDown = accumTopDown' []
+
 -- | Accumulate the results of applying some function to
 --   every node in the Exp AST.
 accum :: (Exp a -> Maybe b) -> Exp a -> [b]
@@ -51,6 +71,9 @@ accum fn e1@(_ ::: e2)      = maybeToList (fn e1) ++ accum fn e2
 accum fn e1@(Exists _ e2)   = maybeToList (fn e1) ++ accum fn e2
 accum fn e1@(_ :# e2)       = maybeToList (fn e1) ++ accum fn e2
 accum fn e1@(Attr _ e2)     = maybeToList (fn e1) ++ accum fn e2
+
+countExpNodes :: Exp a -> Int
+countExpNodes e = length $ accum (const $ Just ()) e
 
 -- | Call the given function on all subexpressions. Good for fixedpoint
 --   functions calling on themselves in recursive case where they don't
@@ -111,4 +134,3 @@ l2r fn e' = let
     lr i e1@(Attr _ e2)   = mTL i e1 ++ lr i e2
 
   in lr (Just 0) e'
-

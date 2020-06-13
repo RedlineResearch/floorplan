@@ -30,19 +30,30 @@ usage = do
 
 data CompilerOutput = RustOutput | COutput | Unknown
 
+doAnalysis :: [Demarc] -> IO ()
+doAnalysis result =
+  case CC.graftingAnalysis result of
+    [] -> return ()
+    xs -> P.putStrLn (show xs) >> exitFailure
+
 doResult :: CompilerOutput -> FilePath -> [Demarc] -> IO ()
 doResult RustOutput outputFile result = do
-  let grafted  :: [S.Demarc]      = map (CC.grafting result) result
-      core_flp :: [CS.BaseExp]    = map CC.compile grafted
-      sf       :: SourceFile Span = RC.genRust core_flp
   --print $ pretty' sf
+  doAnalysis result
+  P.putStrLn ("No grafting errors. Proceeding to graft.")
+  grafted  :: [S.Demarc]      <- return $ map (CC.grafting result) result
+  core_flp :: [CS.BaseExp]    <- return $ map CC.compile grafted
+  sf       :: SourceFile Span <- return $ RC.genRust core_flp
   assert ((CC.countGrafting grafted) == 0) (return ())
+  P.putStrLn ("Grafting completed.")
   (RC.writeModule outputFile) sf
   exitSuccess
 doResult COutput outputFile result = do
-  let grafted  :: [S.Demarc]      = map (CC.grafting result) result
-      core_flp :: [CS.BaseExp]    = map CC.compile grafted
-      sf = CComp.genC core_flp
+  doAnalysis result
+  P.putStrLn ("No grafting errors. Proceeding to graft.")
+  grafted  :: [S.Demarc]      <- return $ map (CC.grafting result) result
+  core_flp :: [CS.BaseExp]    <- return $ map CC.compile grafted
+  sf                          <- return $ CComp.genC core_flp
   assert ((CC.countGrafting grafted) == 0) (return ())
   (CComp.writeCFile outputFile) sf
   exitSuccess
@@ -59,8 +70,13 @@ main = do
   args <- getArgs
   case args of
     (flpFile : outputFile : rst) ->
-      do  contents <- readFile flpFile
+      do  P.putStrLn $ "Loading FLP file from " ++ flpFile ++ "..."
+          contents <- readFile flpFile
+          P.putStrLn $ "Parsing layers..."
           let r = P.parseLayers contents
+          let cnt = sum $ map countDemarcNodes r
+          P.putStrLn $ "Parsed contents: " ++ show r
+          P.putStrLn ("Surface-syntax AST nodes: " ++ show cnt)
           doResult (checkSuffix outputFile) outputFile r
     _ -> usage
 

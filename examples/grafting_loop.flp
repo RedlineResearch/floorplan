@@ -1,0 +1,5 @@
+// Grafting error test.
+
+A -> B
+B -> C
+C -> A

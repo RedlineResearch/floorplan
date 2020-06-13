@@ -56,6 +56,7 @@ dependencies:
 - language-c-quote >= 0.12.2.1
 - mainland-pretty
 - text
+- srcloc
 
 library:
   source-dirs: src

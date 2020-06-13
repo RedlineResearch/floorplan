@@ -4,6 +4,7 @@ import Language.Floorplan.Syntax
 import qualified Data.Map.Strict as M
 import Data.List (sort)
 import Data.Maybe (fromJust, isJust)
+import Debug.Trace as D
 
 -- | Build the dictionary / map of layer (and field) identifiers to their inner Demarc.
 --   Todo: warning when multiple layers have the same name (which one `union` picks is undefined behavior)
@@ -28,20 +29,63 @@ getNames = let
     gN _ = Nothing
   in accum gN
 
--- | Grafting pre-processing pass
+data GraftError =
+    Recursive [String]       -- ^ String is a grafting ID that's part of a recursive path.
+  | UndefinedSymbol String   -- ^ String is the symbol that's undefined
+  deriving (Eq, Ord, Show)
+
+-- | Detect any loop that might arise during the grafting process, returning a witness,
+--   e.g. Left ["A", "B", "C"], if there exists a grafting loop by traversing A->B->C->A.
+graftingAnalysis :: [Demarc] -> [GraftError]
+graftingAnalysis ds_init = let
+
+    ds_map = M.unions $ map buildMap ds_init
+
+    lookup lid =
+      case M.lookup lid ds_map of
+        Nothing -> Left $ UndefinedSymbol lid
+        Just d -> Right d
+
+    gr :: [String] -> Demarc -> [GraftError]
+    gr as d@(Enum{})         = []
+    gr as d@(Bits{})         = []
+    gr as d@(PtrF{})         = []
+    gr as d@(PtrL{})         = []
+    gr as d@(Blob{})         = []
+    gr as d@(Union ds)       = concatMap (gr as) ds
+    gr as d@(Seq ds)         = concatMap (gr as) ds
+    gr as   (Pound d)        = gr as d
+    gr as   (Repetition _ d) = gr as d
+    gr as   (Field fid d)
+      | fid `elem` as = [Recursive $ fid : as]
+      | otherwise     = (gr $ fid : as) d
+    gr as d@(Layer{})
+      | (name d) `elem` as = [Recursive $ name d : as]
+      | otherwise = gr (name d : as) (rhs d)
+    gr as (Graft (lid, args))
+      | lid `elem` as = [Recursive $ lid : as]
+      | otherwise =
+          case lookup lid of
+            Left err -> [err]
+            Right (Field _ d) -> gr (lid : as) d
+            Right (l@(Layer{})) -> D.trace lid $ gr (lid : as) (rhs l)
+
+  in concatMap (gr []) ds_init
+
+-- | Grafting pre-processing pass.
 grafting' :: M.Map String Demarc -> Demarc -> Demarc
 grafting' ds demarc = let
 
     lookup lid =
       case M.lookup lid ds of
-        Nothing -> error $ "Undefined symbol '" ++ lid ++ "' during graft pre-processing phase."
+        Nothing -> error $ "Fatal Error: undefined symbol '" ++ lid ++ "' during graft pre-processing phase."
         Just d -> d
 
     -- | Bool is whether or not we changed the input value
     gr (Graft (lid, args)) =
       case lookup lid of
-        (Field _ d) -> (d, True)
-        l@(Layer{}) -> (l, True) -- TODO: replace formals with args (no partial application)
+        (Field _ d)   -> (d, True)
+        (l@(Layer{})) -> (l, True) -- TODO: replace formals with args (no partial application)
     gr d = (d, False)
 
   in case fmapD gr demarc of

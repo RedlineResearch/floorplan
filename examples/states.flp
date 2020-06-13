@@ -1,0 +1,164 @@
+// Test of type-state
+
+Header @(1 words)@ -> union {
+    seq { MarkWord, KlassPtr, ArrLen, ArrGap }  // 3 words
+  | seq { MarkWord, NarrowKlass, ArrLen }       // 2 words
+  | seq { MarkWord, KlassPtr }                  // 2 words
+  | seq { MarkWord, NarrowKlass, KlassGap }     // 2 words
+}
+
+KlassWord -> union {
+    seq { KlassPtr }
+  | seq { NarrowKlass, KlassGap }
+}
+
+KlassPtr -> Klass ptr
+NarrowKlass -> 4 bytes
+MarkWord   @(1 words)@ -> 1 words
+ForwardPtr @(1 words)@ -> Header ptr
+ArrLen     @(4 bytes)@ -> 4 bytes
+KlassGap   @(4 bytes)@ -> 4 bytes
+ArrGap     @(4 bytes)@ -> 4 bytes
+
+Object -> seq { Header, # words }
+Dummy -> Object
+
+Humongous -> union {
+    Compacted
+  | Object
+}
+Compacted -> Object
+Evacuated -> Object
+
+Reserved -> JVM
+Committed -> JVM
+
+Guard -> # bytes
+Poison -> 1 pages
+Polling -> 1 pages
+
+Page @|1 pages|@ -> union {
+    1 pages | Poison | Polling | Guard | 
+}
+
+CardTable -> seq { # Card, Guard }
+Card -> # bytes
+Bitmap -> # bytes
+IndirectionTable -> # bytes
+RemSet -> # bytes
+
+// TODO: some of these might be less than precise, in part because I haven't dug deeper
+// into the code operating over types like CardCounts:
+CardCounts -> # pages
+
+Virtual -> union {
+    Tail | Expanded
+}
+Tail -> # words
+Expanded -> # words
+
+// Note to self: inline decls cause the types generated to not be globally
+// (top-level) referenceable, which is often desirable.
+
+TLAB -> union { Fresh | New | Fast | Slow | # Object }
+
+Fresh -> # pages
+New -> # pages
+Fast -> # words
+Slow -> # words
+
+JavaHeap -> union { ArrayObj | ClassObj }
+
+// TODO - these two definitions share conflicting headers.
+ClassObj -> seq { Header, # Prim }
+ArrayObj -> seq {
+  Header,
+  # union { Prim | Type | Symbol }
+}
+
+Type -> union { # words | NoZero -> # words } // TODO(?)
+Symbol -> # words // TODO(?)
+
+Prim -> union { Bool | Char | Float | Double | Byte | Short | Int | Long | ObjPointer }
+
+Bool -> 1 bytes
+Char -> 1 bytes
+Float -> 4 bytes
+Double -> 8 bytes
+Byte -> 1 bytes
+Short -> 2 bytes
+Int -> 4 bytes
+Long -> 8 bytes
+ObjPointer -> 1 words
+
+// Possible syntactic extension to get rid of types for which one hasn't written
+// code that might need those types (and subtypes):
+// %filterout "JavaHeap_ArrayObj$" // <-- regex backend for eliminating unnecessary types
+
+PLAB -> union { AlignFill | # words }
+
+Eden -> union { Forwarded | Fast -> Object | Slow -> Object }
+
+// TODO - these primarily correspond to source code locations in which instrumentation is
+// already present, but need to be refined further with-respect-to layout. This way the
+// types get defined for generation purposes and to move forward with testing the pipeline.
+FreeRegion -> # bytes
+MallocHeap -> # bytes
+OSMallocUserData -> # bytes
+GuardedMemory -> # bytes
+UninitGuardedMemory -> # bytes
+HeapRegionPtr -> 1 words
+LoggingBuf -> # bytes
+ChunkInPool -> # bytes
+FreshChunk -> # bytes
+FreshChunkReqBytes -> # bytes
+Chunk -> # bytes
+ChunkReqBytes -> # bytes
+ArenaMalloc -> # bytes
+FileMapHeader -> # bytes
+ClasspathEntryPtr -> 1 words
+ArchiveHeader -> # words
+DynamicHeader -> # words
+OccupancyMap -> # words
+LinesPrinter -> # bytes
+ResourceAreaBytes -> # bytes
+NativeMethodPrefixPtr -> 1 words
+JVMTI -> union {
+    Alloc -> # bytes
+  | InstanceKlassPtr -> 1 words
+  | TagHashmapEntry -> # bytes
+}
+UnsafeAlloc -> # bytes
+NMTTesting -> # bytes
+DiagnosticString -> # bytes
+DumpWriterBuffer -> # bytes
+DumpWriterPath -> # bytes
+ELFSectionData -> # bytes
+ELFFilePath -> # bytes
+ThreadStack -> # bytes
+JavaHeapRebuiltRegion -> # bytes
+FreeSetTrashRegion -> # bytes
+ClassOopSizeField -> # bytes
+FreeSetHumongousAllocated -> # bytes
+FreeSetHumongousWasted -> # bytes
+FreeSetSingleAllocated -> # bytes
+NewGCLAB -> # bytes
+CSetTrashed -> # bytes
+HumongousTrashed -> # bytes
+CompactibleSpaceForwardeePtr -> 1 words
+EvacuatedForwardeePtr -> 1 words
+UpdatedRefsForwardee -> 1 words
+
+JVM -> union {
+    Page | Virtual | BlockOffsetTable | CardTable | CardCounts
+  | Verifier -> Bitmap | Prev -> Bitmap | Next -> Bitmap
+  | IndirectionTable | RemSet | JavaHeap | Metadata | TLAB
+  | PLAB | Eden | Evacuated | Region -> union { FreeR | AllocR }
+}
+
+Metadata -> # bytes
+AlignFill -> # bytes
+Forwarded -> # bytes
+FreeR -> # words // exact...
+AllocR -> # words // exact...
+BlockOffsetTable -> # words

@@ -1,0 +1,3 @@
+#!/bin/bash
+stack build --ghc-options="-ddump-splices -ddump-to-file"
+stack exec flp examples/states.flp out.c && cat out.c
