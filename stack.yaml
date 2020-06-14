@@ -5,7 +5,8 @@
 #resolver: lts-13.29
 #resolver: lts-14.6
 #resolver: lts-11.14
-resolver: lts-14.21
+#resolver: lts-14.21
+resolver: lts-16.0
 
 packages:
 - .

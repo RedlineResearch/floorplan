@@ -5,51 +5,75 @@ import Language.Floorplan.Syntax
 import Language.Floorplan.Token
 }
 
-%name layers
+%name layers layers
+%name decls  decls
+
 %tokentype { Token }
 %error { parseError }
 
 %token
-    seq       { TokenSeq }
-    union     { TokenUnion }
-    'contains' { TokenContains }
-    bits      { TokenBits }
-    bytes     { TokenBytes }
-    words     { TokenWords }
-    pages     { TokenPages }
-    'ptr'     { TokenPtr }
-    enum      { TokenEnum }
-    '->'  		{ TokenArrow }
-		'@('      { TokenAtParen }
-		')@'      { TokenParenAt }
-		'@|'      { TokenAtBar }
-		'|@'      { TokenBarAt }
-		'('       { TokenLParen }
-		')'       { TokenRParen }
-		'<'       { TokenLess }
-		'>'       { TokenGreater }
-		'<$'      { TokenLessD }
-		'$>'      { TokenGreaterD }
-		'|'       { TokenBar }
-		'||'      { TokenBarBar }
-		'{'       { TokenLCurl }
-		'}'       { TokenRCurl }
-		'#'       { TokenPound }
-		':'       { TokenColon }
-		','       { TokenComma }
-		'+'       { TokenPlus }
-		'-'       { TokenMinus }
-		'*'       { TokenTimes }
-		'/'       { TokenDiv }
-		'^'       { TokenExponent }
-    literal   { TokenNum $$ }
-    UpperID   { TokenUpperID $$ }
-    LowerID   { TokenLowerID $$ }
+    seq          { TokenSeq }
+    union        { TokenUnion }
+    'contains'   { TokenContains }
+    bits         { TokenBits }
+    bytes        { TokenBytes }
+    words        { TokenWords }
+    pages        { TokenPages }
+    'ptr'        { TokenPtr }
+    enum         { TokenEnum }
+    '->'  		   { TokenArrow }
+		'@('         { TokenAtParen }
+		')@'         { TokenParenAt }
+		'@|'         { TokenAtBar }
+		'|@'         { TokenBarAt }
+		'('          { TokenLParen }
+		')'          { TokenRParen }
+		'<'          { TokenLess }
+		'>'          { TokenGreater }
+		'<$'         { TokenLessD }
+		'$>'         { TokenGreaterD }
+		'|'          { TokenBar }
+		'||'         { TokenBarBar }
+		'{'          { TokenLCurl }
+		'}'          { TokenRCurl }
+		'#'          { TokenPound }
+		':'          { TokenColon }
+		','          { TokenComma }
+		'+'          { TokenPlus }
+		'-'          { TokenMinus }
+		'*'          { TokenTimes }
+		'/'          { TokenDiv }
+		'^'          { TokenExponent }
+    '%begin'     { TokenBeginScope }
+    '%end'       { TokenEndScope }
+    '%filterout' { TokenFilterOut }
+    noglobal     { TokenNoGlobal }
+    stringlit    { TokenStringLiteral $$ }
+    literal      { TokenNum $$ }
+    UpperID      { TokenUpperID $$ }
+    LowerID      { TokenLowerID $$ }
 
 -- %left '+' '-'
 -- %left '*' '/'
 -- %left '^'
 %%
+{- ------------------------------------------------------------------------- -}
+{- Floorplan top-level declarations -}
+
+-- Zero or more
+decls   : {- empty -} { [] }
+        | decls decl { $2 : $1 }
+
+decl : layer                  { LayerDecl $1 }
+     | '%begin' attrs         { ScopeDecl $2 }
+     | '%end'                 { EndScopeDecl }
+     | '%filterout' stringlit { FilterOutDecl $2 }
+
+-- One or more
+attrs : attr       { [$1] }
+      | attrs attr { $2 : $1 }
+
+attr : noglobal { NoGlobalAttr }
 
 {- ------------------------------------------------------------------------- -}
 {- Floorplan layers -}
@@ -184,5 +208,9 @@ parseError xs = error $ "Parse error with remaining input: " ++ show xs
 
 parseLayers :: String -> [Demarc]
 parseLayers = reverse . layers . scanTokens
+
+parseTopLevelDecls :: String -> [Decl]
+parseTopLevelDecls = reverse . decls . scanTokens
+
 }
 

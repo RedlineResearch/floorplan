@@ -7,6 +7,8 @@ import System.IO hiding (putStr, putStrLn, hGetLine)
 import System.Exit (exitSuccess, exitFailure)
 import Control.Exception (assert)
 import Data.List (isSuffixOf)
+import Data.Either (partitionEithers)
+import Text.RE.TDFA.String (RE(..), compileRegex)
 
 import Language.Rust.Syntax (SourceFile(..))
 import Language.Rust.Data.Position (Span(..))
@@ -22,6 +24,7 @@ import qualified Language.Floorplan.Core.Compiler as CC
 import qualified Language.Floorplan.Core.Syntax as CS
 
 import qualified Language.Floorplan.C.Compiler as CComp
+import qualified Language.Floorplan.Preproc.Passes as Preproc
 
 usage = do
   pName <- getProgName
@@ -30,34 +33,36 @@ usage = do
 
 data CompilerOutput = RustOutput | COutput | Unknown
 
-doAnalysis :: [Demarc] -> IO ()
-doAnalysis result =
-  case CC.graftingAnalysis result of
-    [] -> return ()
-    xs -> P.putStrLn (show xs) >> exitFailure
+validateAnalysis [] = return ()
+validateAnalysis xs = P.putStrLn (show xs) >> exitFailure
 
-doResult :: CompilerOutput -> FilePath -> [Demarc] -> IO ()
-doResult RustOutput outputFile result = do
-  --print $ pretty' sf
-  doAnalysis result
+-- | Returns a tuple (for now just the [RE]) of the results of analyses with computed results.
+doAnalyses :: [Decl] -> IO [RE]
+doAnalyses result = do
+  (errors, regexes) <- partitionEithers <$> Preproc.regexAnalysis result
+  validateAnalysis     errors
+  validateAnalysis  $  Preproc.balancedScopeAnalysis result
+  validateAnalysis  $  Preproc.graftingAnalysis result
+  return regexes
+
+--print $ pretty' sf
+
+doResult :: CompilerOutput -> FilePath -> [Decl] -> IO ()
+doResult Unknown outputFile _ = P.putStrLn ("Error: File type unknown '" ++ outputFile ++ "'") >> usage
+doResult out_type outputFile result = do
+  filterOutRegexes <- doAnalyses result
   P.putStrLn ("No grafting errors. Proceeding to graft.")
-  grafted  :: [S.Demarc]      <- return $ map (CC.grafting result) result
-  core_flp :: [CS.BaseExp]    <- return $ map CC.compile grafted
-  sf       :: SourceFile Span <- return $ RC.genRust core_flp
-  assert ((CC.countGrafting grafted) == 0) (return ())
+  let layers   :: [S.Demarc]      = Preproc.removeNoGlobalPass result
+      grafted  :: [S.Demarc]      = map (Preproc.grafting $ onlyLayers result) layers
+      core_flp :: [CS.BaseExp]    = map CC.compile grafted
+  assert (CC.countGrafting grafted == 0) (return ())
   P.putStrLn ("Grafting completed.")
-  (RC.writeModule outputFile) sf
+  case out_type of
+    RustOutput -> do  sf :: SourceFile Span <- return $ RC.genRust core_flp
+                      (RC.writeModule outputFile) sf
+    COutput    -> do  sf <- return $ CComp.genC core_flp
+                      (CComp.writeCFile outputFile) sf
   exitSuccess
-doResult COutput outputFile result = do
-  doAnalysis result
-  P.putStrLn ("No grafting errors. Proceeding to graft.")
-  grafted  :: [S.Demarc]      <- return $ map (CC.grafting result) result
-  core_flp :: [CS.BaseExp]    <- return $ map CC.compile grafted
-  sf                          <- return $ CComp.genC core_flp
-  assert ((CC.countGrafting grafted) == 0) (return ())
-  (CComp.writeCFile outputFile) sf
-  exitSuccess
-doResult _ outputFile _ = P.putStrLn ("Error: File type unknown '" ++ outputFile ++ "'") >> usage
 
 oops s = P.putStr s >> exitFailure
 
@@ -72,12 +77,12 @@ main = do
     (flpFile : outputFile : rst) ->
       do  P.putStrLn $ "Loading FLP file from " ++ flpFile ++ "..."
           contents <- readFile flpFile
-          P.putStrLn $ "Parsing layers..."
-          let r = P.parseLayers contents
-          let cnt = sum $ map countDemarcNodes r
-          P.putStrLn $ "Parsed contents: " ++ show r
+          P.putStrLn $ "Parsing top-level declarations..."
+          let result = P.parseTopLevelDecls contents
+          let cnt = sum $ map countDeclNodes result
+          P.putStrLn $ "Parsed contents: " ++ show result
           P.putStrLn ("Surface-syntax AST nodes: " ++ show cnt)
-          doResult (checkSuffix outputFile) outputFile r
+          doResult (checkSuffix outputFile) outputFile result
     _ -> usage
 
 

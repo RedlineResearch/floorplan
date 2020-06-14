@@ -14,40 +14,45 @@ tokens :-
   $eol      ;
   $white+   ;
   "//".*    ;
-  seq       { \s -> TokenSeq }
-  union     { \s -> TokenUnion }
-  contains  { \s -> TokenContains }
-  bits      { \s -> TokenBits }
-  bytes     { \s -> TokenBytes }
-  words     { \s -> TokenWords }
-  pages     { \s -> TokenPages }
-  ptr       { \s -> TokenPtr }
-  enum      { \s -> TokenEnum }
-  "->"      { \s -> TokenArrow }
-  "@("      { \s -> TokenAtParen }
-  ")@"      { \s -> TokenParenAt }
-  "@|"      { \s -> TokenAtBar }
-  "|@"      { \s -> TokenBarAt }
-  "<$"      { \s -> TokenLessD }
-  "$>"      { \s -> TokenGreaterD }
-  \(        { \s -> TokenLParen }
-  \)        { \s -> TokenRParen }
-  \<        { \s -> TokenLess }
-  \>        { \s -> TokenGreater }
-  \|        { \s -> TokenBar }
-  \|\|      { \s -> TokenBarBar }
-  \{        { \s -> TokenLCurl }
-  \}        { \s -> TokenRCurl }
-  \#        { \s -> TokenPound }
-  \:        { \s -> TokenColon }
-  \,        { \s -> TokenComma }
-  [\+]      { \s -> TokenPlus }
-  [\-]      { \s -> TokenMinus }
-  [\*]      { \s -> TokenTimes }
-  [\/]      { \s -> TokenDiv }
-  [\^]      { \s -> TokenExponent }
-  $digit+   { \s -> TokenNum (read s) }
-  0b [01]+  { \s -> TokenNum (bin2int s) }
+  seq          { \s -> TokenSeq }
+  union        { \s -> TokenUnion }
+  contains     { \s -> TokenContains }
+  bits         { \s -> TokenBits }
+  bytes        { \s -> TokenBytes }
+  words        { \s -> TokenWords }
+  pages        { \s -> TokenPages }
+  ptr          { \s -> TokenPtr }
+  enum         { \s -> TokenEnum }
+  "->"         { \s -> TokenArrow }
+  "@("         { \s -> TokenAtParen }
+  ")@"         { \s -> TokenParenAt }
+  "@|"         { \s -> TokenAtBar }
+  "|@"         { \s -> TokenBarAt }
+  "<$"         { \s -> TokenLessD }
+  "$>"         { \s -> TokenGreaterD }
+  \(           { \s -> TokenLParen }
+  \)           { \s -> TokenRParen }
+  \<           { \s -> TokenLess }
+  \>           { \s -> TokenGreater }
+  \|           { \s -> TokenBar }
+  \|\|         { \s -> TokenBarBar }
+  \{           { \s -> TokenLCurl }
+  \}           { \s -> TokenRCurl }
+  \#           { \s -> TokenPound }
+  \:           { \s -> TokenColon }
+  \,           { \s -> TokenComma }
+  [\+]         { \s -> TokenPlus }
+  [\-]         { \s -> TokenMinus }
+  [\*]         { \s -> TokenTimes }
+  [\/]         { \s -> TokenDiv }
+  [\^]         { \s -> TokenExponent }
+  "%begin"     { \s -> TokenBeginScope }
+  "%end"       { \s -> TokenEndScope }
+  "%filterout" { \s -> TokenFilterOut } -- filter out rules
+  noglobal     { \s -> TokenNoGlobal }
+  \"[^\"]*\"   { \s -> TokenStringLiteral $ tail $ init s }
+  $digit+      { \s -> TokenNum (read s) }
+  0b [01]+     { \s -> TokenNum (bin2int s) }
   [a-z] [$alpha $digit \_]* { \s -> TokenLowerID s }
   [A-Z] [$alpha $digit \_]* { \s -> TokenUpperID s}
 
@@ -88,6 +93,8 @@ data Token =
   | TokenNum Int
   | TokenUpperID String
   | TokenLowerID String
+  | TokenBeginScope | TokenEndScope | TokenNoGlobal
+  | TokenStringLiteral String | TokenFilterOut
   deriving (Eq, Ord, Show)
 
 scanTokens = alexScanTokens

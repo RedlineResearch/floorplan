@@ -26,6 +26,37 @@ instance Read Primitive where
     Just x  -> [(x,"")]
     Nothing -> []
 
+data Decl =
+    LayerDecl Demarc      -- ^ Technically this is always a Layer
+  | ScopeDecl [ScopeAttribute] -- ^ 
+  | EndScopeDecl
+  | FilterOutDecl String  -- ^ The 'String' is the regex
+  deriving (Eq, Ord, Show)
+
+onlyLayers :: [Decl] -> [Demarc]
+onlyLayers (LayerDecl d : ds) = d : onlyLayers ds
+onlyLayers (_ : ds) = onlyLayers ds
+onlyLayers [] = []
+
+onlyFilterOuts :: [Decl] -> [String]
+onlyFilterOuts (FilterOutDecl s : ds) = s : onlyFilterOuts ds
+onlyFilterOuts (_ : ds) = onlyFilterOuts ds
+onlyFilterOuts [] = []
+
+-- | Attributes affect the way groups of declarations are treated by the
+--   compiler. For now NoGlobal is the only one, which mechanically means
+--   any Layer declarations within this scope will be thrown away immediately
+--   after the grafting pre-processing step. In semantic effect, this entails that
+--   any layers affected by a NoGlobal are not allocatable or even referenceable
+--   as global entities with-respect-to FLP-generated types and code. The motivating
+--   reason for adding this functionality to the compiler's preprocessor, initially,
+--   is to reduce the number of types generated to just the ones the programmer
+--   deems necessary or desirable. But this also means it will have unforseen
+--   effects (good or bad) down the compiler pipeline as to how declarations are
+--   treated.
+data ScopeAttribute = NoGlobalAttr
+  deriving (Eq, Ord, Show)
+
 data Demarc =
     Enum [FlagID]
   | Bits [(FieldID, SizeArith)]
@@ -86,6 +117,10 @@ accum fn d@(Layer{})        = mTL (fn d) ++ accum fn (rhs d)
 
 countDemarcNodes :: Demarc -> Int
 countDemarcNodes e = length $ accum (const $ Just ()) e
+
+countDeclNodes :: Decl -> Int
+countDeclNodes (LayerDecl d) = countDemarcNodes d
+countDeclNodes _ = 1
 
 accumTopDown' :: [a] -> ([a] -> Demarc -> Maybe a) -> Demarc -> [a]
 accumTopDown' as fn d@(Enum{})         = mTL (fn as d)

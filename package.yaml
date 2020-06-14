@@ -57,6 +57,7 @@ dependencies:
 - mainland-pretty
 - text
 - srcloc
+- regex >= 1.1.0.0
 
 library:
   source-dirs: src

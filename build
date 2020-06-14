@@ -1,3 +1,5 @@
 #!/bin/bash
-stack build --ghc-options="-ddump-splices -ddump-to-file"
+stack build --ghc-options="-ddump-splices -ddump-to-file"; ret=$?
+if ! [ $ret -eq 0 ]; then exit $ret; fi
 stack exec flp examples/states.flp out.c && cat out.c
+
