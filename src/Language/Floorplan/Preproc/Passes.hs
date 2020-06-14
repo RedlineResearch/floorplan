@@ -15,6 +15,34 @@ import Text.RE.TDFA.String (RE(..), compileRegex)
 import GHC.IO.Exception
 import Control.Exception (catch)
 
+-- TODO: analysis to check for multiple header / footer declarations in the input. Unless
+-- we want to just output headers / footers in the order in which they appear in the input file.
+
+-- TODO: the two String types should be given names (headers and footers) to be
+-- used throughout the code.
+
+-- | For now the header/footer analysis only produces an error when it sees a 'header' or
+--   or 'footer' attribute occur in conjunction with 
+headFootAnalysis :: [Decl] -> ([PreprocError], String, String)
+headFootAnalysis [] = ([], [], [])
+headFootAnalysis (HeaderDecl s : ds) =
+  let (errs, hds, foots) = headFootAnalysis ds
+  in  (errs, s ++ hds, foots)
+headFootAnalysis (FooterDecl s : ds) =
+  let (errs, hds, foots) = headFootAnalysis ds
+  in  (errs, hds, s ++ foots)
+headFootAnalysis (ScopeDecl as : ds)
+  | OutputHeader `elem` as =
+      let (errs, hds, foots) = headFootAnalysis ds
+          new_err = InvalidAttribute $ "Error: 'header' scope attribute cannot occur with other attributes: " ++ show as
+      in  (new_err : errs, hds, foots)
+  | OutputFooter `elem` as =
+      let (errs, hds, foots) = headFootAnalysis ds
+          new_err = InvalidAttribute $ "Error: 'footer' scope attribute cannot occur with other attributes: " ++ show as
+      in  (new_err : errs, hds, foots)
+  | otherwise = headFootAnalysis ds
+headFootAnalysis (_ : ds) = headFootAnalysis ds
+
 balancedScopeAnalysis :: [Decl] -> [PreprocError]
 balancedScopeAnalysis ds = let
     bSA :: Int -> [Decl] -> [PreprocError]
@@ -37,7 +65,7 @@ handleRegexFail :: IOException -> IO (Either PreprocError RE)
 handleRegexFail (IOError _ _ _ err _ _) = return $ Left $ RegexError err
 --handleRegexFail (IOError Nothing UserError [] err) = return $ Left $ RegexError err
 
--- TODO
+
 regexAnalysis :: [Decl] -> IO [Either PreprocError RE]
 regexAnalysis [] = return []
 regexAnalysis (FilterOutDecl re : ds') = do

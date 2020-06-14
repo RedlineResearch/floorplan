@@ -31,6 +31,8 @@ data Decl =
   | ScopeDecl [ScopeAttribute] -- ^ 
   | EndScopeDecl
   | FilterOutDecl String  -- ^ The 'String' is the regex
+  | HeaderDecl String     -- ^ C-like or Rust-like code
+  | FooterDecl String     -- ^ C-like or Rust-like code
   deriving (Eq, Ord, Show)
 
 onlyLayers :: [Decl] -> [Demarc]
@@ -54,7 +56,8 @@ onlyFilterOuts [] = []
 --   deems necessary or desirable. But this also means it will have unforseen
 --   effects (good or bad) down the compiler pipeline as to how declarations are
 --   treated.
-data ScopeAttribute = NoGlobalAttr
+data ScopeAttribute =
+    NoGlobalAttr | OutputHeader | OutputFooter
   deriving (Eq, Ord, Show)
 
 data Demarc =

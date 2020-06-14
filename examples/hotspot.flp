@@ -1,4 +1,10 @@
-// Test of type-state
+
+// Embedding in a project with 'header' / 'footer':
+%begin header
+#ifndef SHARE_NATIVE_FLP_TYPES_HPP                                                                                                                                                                                                          
+#define SHARE_NATIVE_FLP_TYPES_HPP
+
+%end // Blank line above intentional for generated style purposes.
 
 %begin noglobal // Definitions in some way referenced by JVM
 
@@ -96,6 +102,8 @@ Committed -> JVM
 // and *ends* with an underscore, so it filters out depth 2 and greater.
 %filterout "^(Reserved|Committed)_JVM_[^_]*_"
 
+%filterout "ClassObj_Header_Arr(Len|Gap)$"
+
 JVM -> union {
     Page @|1 pages|@ -> union { 1 pages | Poison | Polling | Guard }
   | Virtual -> union { Tail -> # words | Expanded -> # words }
@@ -165,3 +173,7 @@ HumongousTrashed -> # bytes
 CompactibleSpaceForwardeePtr -> 1 words
 EvacuatedForwardeePtr -> 1 words
 UpdatedRefsForwardee -> 1 words
+
+%begin footer
+#endif
+%end

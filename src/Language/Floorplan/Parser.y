@@ -44,6 +44,8 @@ import Language.Floorplan.Token
 		'*'          { TokenTimes }
 		'/'          { TokenDiv }
 		'^'          { TokenExponent }
+    header       { TokenHeader $$ } -- '%begin header' ... '%end'
+    footer       { TokenFooter $$ } -- '%begin footer' ... '%end'
     '%begin'     { TokenBeginScope }
     '%end'       { TokenEndScope }
     '%filterout' { TokenFilterOut }
@@ -64,16 +66,24 @@ import Language.Floorplan.Token
 decls   : {- empty -} { [] }
         | decls decl { $2 : $1 }
 
-decl : layer                  { LayerDecl $1 }
-     | '%begin' attrs         { ScopeDecl $2 }
-     | '%end'                 { EndScopeDecl }
-     | '%filterout' stringlit { FilterOutDecl $2 }
+decl  : layer                  { LayerDecl $1 }
+      | header                 { HeaderDecl $1 }
+      | footer                 { FooterDecl $1 }
+      | '%begin' attrs         { ScopeDecl $2 }
+      | '%end'                 { EndScopeDecl }
+      | '%filterout' stringlit { FilterOutDecl $2 }
 
 -- One or more
 attrs : attr       { [$1] }
       | attrs attr { $2 : $1 }
 
 attr : noglobal { NoGlobalAttr }
+      -- Technically if the following two attributes parse here then
+      -- the input is malformed, but we let it parse so that an analysis
+      -- pass can remind the user that these attribute are invalid
+      -- in conjunction with other attributes.
+     | header   { OutputHeader }
+     | footer   { OutputFooter }
 
 {- ------------------------------------------------------------------------- -}
 {- Floorplan layers -}

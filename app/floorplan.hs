@@ -19,6 +19,7 @@ import qualified Language.Floorplan.Rust.Compiler as RC
 
 --import qualified Language.Floorplan.Parser as P
 import qualified Language.Floorplan.Parser as P
+import qualified Language.Floorplan.Token as T
 import qualified Language.Floorplan.Syntax as S
 import qualified Language.Floorplan.Core.Compiler as CC
 import qualified Language.Floorplan.Core.Syntax as CS
@@ -37,20 +38,22 @@ validateAnalysis [] = return ()
 validateAnalysis xs = P.putStrLn (show xs) >> exitFailure
 
 -- | Returns a tuple (for now just the [RE]) of the results of analyses with computed results.
-doAnalyses :: [Decl] -> IO [RE]
+doAnalyses :: [Decl] -> IO ([RE], String, String)
 doAnalyses result = do
   (errors, regexes) <- partitionEithers <$> Preproc.regexAnalysis result
   validateAnalysis     errors
   validateAnalysis  $  Preproc.balancedScopeAnalysis result
   validateAnalysis  $  Preproc.graftingAnalysis result
-  return regexes
+  let (err, header, footer) = Preproc.headFootAnalysis result
+  validateAnalysis     err
+  return (regexes, header, footer)
 
 --print $ pretty' sf
 
 doResult :: CompilerOutput -> FilePath -> [Decl] -> IO ()
 doResult Unknown outputFile _ = P.putStrLn ("Error: File type unknown '" ++ outputFile ++ "'") >> usage
 doResult out_type outputFile result = do
-  filterOutRegexes <- doAnalyses result
+  (filterOutRegexes, header, footer) <- doAnalyses result
   P.putStrLn ("No grafting errors. Proceeding to graft.")
   let layers   :: [S.Demarc]      = Preproc.removeNoGlobalPass result
       grafted  :: [S.Demarc]      = map (Preproc.grafting $ onlyLayers result) layers
@@ -59,16 +62,24 @@ doResult out_type outputFile result = do
   P.putStrLn ("Grafting completed.")
   case out_type of
     RustOutput -> do  sf :: SourceFile Span <- return $ RC.genRust core_flp
+                      if length filterOutRegexes > 0
+                        then P.putStrLn "Warning: Rust output mode does not support filtering regular expressions. Ignoring."
+                        else return ()
+                      if length header > 0 || length footer > 0
+                        then P.putStrLn "Warning: Rust output mode does not support headers or footers. Ignoring."
+                        else return ()
                       (RC.writeModule outputFile) sf
-    COutput    -> do  sf <- return $ CComp.genC core_flp
-                      (CComp.writeCFile outputFile) sf
+    COutput    -> do  sf <- return $ CComp.genC core_flp filterOutRegexes
+                      (CComp.writeCFile outputFile (header, footer)) sf
   exitSuccess
 
 oops s = P.putStr s >> exitFailure
 
 checkSuffix f
-  | ".rs" `isSuffixOf` f = RustOutput
-  | ".c"  `isSuffixOf` f = COutput
+  | ".rs"  `isSuffixOf` f = RustOutput
+  | ".c"   `isSuffixOf` f = COutput
+  | ".h"   `isSuffixOf` f = COutput
+  | ".hpp" `isSuffixOf` f = COutput
   | otherwise = Unknown
 
 main = do
@@ -78,6 +89,8 @@ main = do
       do  P.putStrLn $ "Loading FLP file from " ++ flpFile ++ "..."
           contents <- readFile flpFile
           P.putStrLn $ "Parsing top-level declarations..."
+          --let toks = T.scanTokens contents
+          --P.putStrLn $ "Tokens: " ++ show toks
           let result = P.parseTopLevelDecls contents
           let cnt = sum $ map countDeclNodes result
           P.putStrLn $ "Parsed contents: " ++ show result

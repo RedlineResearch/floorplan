@@ -12,4 +12,5 @@ data PreprocError =
   | DuplicateAttribute [ScopeAttribute] -- ^ The list of attributes contains unnecessary duplicates.
   | UnbalancedScope Int                 -- ^ %begin / %end are unbalanced.
   | RegexError String                   -- ^ A regex was unable to be compiled.
+  | InvalidAttribute String             -- ^ String is an error message.
   deriving (Eq, Ord, Show)

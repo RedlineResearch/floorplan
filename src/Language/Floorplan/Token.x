@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -w #-}
 module Language.Floorplan.Token (Token(..), scanTokens) where
 import Language.Floorplan.Syntax
+import qualified Debug.Trace as D
 }
 
 %wrapper "basic"
@@ -95,8 +96,50 @@ data Token =
   | TokenLowerID String
   | TokenBeginScope | TokenEndScope | TokenNoGlobal
   | TokenStringLiteral String | TokenFilterOut
+  | TokenHeader String | TokenFooter String
   deriving (Eq, Ord, Show)
 
-scanTokens = alexScanTokens
-}
+-- | Returns a tuple of all contents before the first instance of '%end' along with
+--   the rest of the input string *after* the '%end'.
+getUntilEnd :: String -> String -> (String, String)
+getUntilEnd _ ('%':'e':'n':'d':rest) = ("", rest)
+getUntilEnd kind "" = error $ "Reached end of input while parsing " ++ kind
+getUntilEnd kind (c:cs) =
+  let (got, rest) = getUntilEnd kind cs
+  in  (c : got, rest)
 
+getHeader = getUntilEnd "header"
+getFooter = getUntilEnd "footer"
+
+-- | Special case for parsing C-like or Rust-like headers and footers of output.
+scanTokens :: String -> [Token]
+scanTokens "" = []
+scanTokens s =
+  case alexScan ('\n',[],s) 0 of
+    AlexEOF -> []
+    (AlexError e) -> error $ show e -- TODO: bad failure mode
+    (AlexSkip (_,_,s') _) -> scanTokens s'
+    (AlexToken (_,_,s') len act) ->
+      case act (take len s) of
+        TokenBeginScope -> checkBegin s'
+        tok -> tok : scanTokens s' -- Fall-through case
+
+checkBegin :: String -> [Token]
+checkBegin s =
+  case alexScan ('\n', [], s) 0 of
+    AlexEOF -> []
+    (AlexError e) -> error $ show e -- TODO: bad failure mode
+    (AlexSkip (_,_,s') _) -> checkBegin s'
+    (AlexToken (_,_,s') len act) ->
+      case act (take len s) of
+        TokenLowerID "header" ->
+          let (header, s'') = getHeader s'
+          in  TokenHeader header : scanTokens s''
+        TokenLowerID "footer" ->
+          let (footer, s'') = getFooter s'
+          in  TokenFooter footer : scanTokens s''
+        -- Fall-through case: it wasn't a header or a footer, so we need
+        -- to include the '%begin' scope token that we already parsed in the input.
+        tok -> TokenBeginScope : tok : scanTokens s'
+
+}
