@@ -76,6 +76,10 @@ doFilterOut types res0 = let
       | otherwise = dFO t res    -- Check the rest of the regular expressions.
   in concatMap (\f -> f res0) (map dFO types)
 
+-- | Wholly filtered out types (ones resulting a FLP_ALL_* decl with an empty RHS of the #define)
+--   probably imply that there were unused types / dead code in the FLP spec. Either need to
+--   report a warning in such a case, or write a preprocessing analysis pass that checks that this
+--   won't happen.
 mkAllPrefixes :: [BaseExp] -> [RE] -> [S.Definition]
 mkAllPrefixes bes res = let
 

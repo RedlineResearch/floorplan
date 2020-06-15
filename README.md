@@ -1,21 +1,33 @@
 # Floorplan compiler
 
 A language for specifying the layout of a one-dimensional address space, particularly
-for garbage collectors and manual memory managers written in Rust.
+for garbage collectors and manual memory managers written in Rust and C/C++.
 
 ## Building and running
 
-Floorplan is written in Haskell and must be [built with stack](https://docs.haskellstack.org/en/stable/README/).
-Once you have stack installed on your system, you should be able to run the build
-command and everything should just work:
+Floorplan is written in Haskell and must be [built with either
+stack](https://docs.haskellstack.org/en/stable/README/) or
+[cabal](haskell.org/cabal). If you just want to build and install Floorplan
+globally on your system you can do the following:
 
 ```bash
-$ stack build
+$ cabal install flp
+```
+
+This will pull the latest stable release of Floorplan from
+[Hackage](hackage.haskell.org/package/flp) and install the `flp` executable
+globally. If instead you wish to make modifications to the compiler or to
+reference it directly from another Haskell project, you can pull the
+master branch of this repo and build the project like follows:
+
+```bash
+$ git clone --branch master https://github.com/RedlineResearch/floorplan.git
+$ cd floorplan && stack build
 ...
 Completed 2 action(s).
 ```
 
-At which point you can compile the file `examples/immix/layout.flp` with
+At which point you can compile, for example, the file `examples/immix/layout.flp` with
 the `build-immix` script:
 
 ```bash
@@ -36,15 +48,29 @@ be run directly as follows:
 stack exec flp [path/to/layout.flp] [path/to/generated.rs]
 ```
 
-Note that in order to subsequently build a Rust file generated in this manner,
+### Rust
+
+Note that to build a Rust file generated in this manner,
 you must include the `flp-framework` to your Cargo dependencies, and `flp-compiler`
-to your cargo build-dependencies. The later is simply a wrapper for calling out
+to your cargo build-dependencies. The latter is simply a wrapper for calling out
 to the (already stack-installed) flp compiler, and the framework crate contains
 necessary macros and address types that generated Rust code uses.
 
 The skeleton of a Rust cargo project is given in the `genrs/` directory of this
 repo, which can be copied over and modified to support the needs of a memory
 manager other than immix-rust.
+
+### C/C++
+
+C/C++ output is under active development. Regardless of which output type is chosen
+(`.c`, `.h`, or `.hpp`), the compiler will output the same C-like code. This is
+expected to work with a recent version of the Clang compiler, but will likely work
+just as fine under a modern verison of GCC.
+
+When reporting an issue with the C output mode of the Floorplan compiler, please
+check first or have a reasonable belief that the same issue happens with Clang.
+Modifications to the compiler which tailor the output to different C compilers are
+more than welcome, but we intend to primarily support Clang as a backend toolchain.
 
 ## Dependencies
 
