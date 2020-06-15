@@ -27,15 +27,6 @@ ForwardPtr @(1 words)@ -> Header ptr
 ArrLen     @(4 bytes)@ -> 4 bytes
 KlassGap   @(4 bytes)@ -> 4 bytes
 ArrGap     @(4 bytes)@ -> 4 bytes
-Object -> seq { Header, # words }
-Dummy -> Object
-
-Humongous -> union {
-    Compacted
-  | Object
-}
-Compacted -> Object
-Evacuated -> Object
 
 Guard -> # bytes
 Poison -> 1 pages
@@ -67,6 +58,11 @@ ArrayObj -> seq {
   # union { Prim | Type | Symbol }
 }
 
+// We aren't tracking primitive fields of class objects just yet,
+// so filter out those types until we support configurability of a larger
+// number of types.
+%filterout "ClassObj_Prim.*"
+
 Type -> union { # words | NoZero -> # words } // TODO(?)
 Symbol -> # words // TODO(?)
 
@@ -92,6 +88,21 @@ PLAB -> union { AlignFill -> # bytes | # words }
 Eden -> union { Forwarded -> # bytes | Fast -> Object | Slow -> Object }
 
 %end // (noglobal) end JVM referenced types
+
+Humongous -> union {
+    Compacted
+}
+// An Object doesn't distinguish between a class object and an array object
+// except as insofar as you can ask for the ArrLen field of an Object. This
+// provides a unified interface to objects when you need it (much like the
+// definition of oopDesc) and a disjoint one when you don't (ClassObj / ArrayObj).
+// Certain code paths know e.g. that an object is being allocated and the size
+// of the underlying memory in words, but not the variant.
+Object -> seq { Header, # words }
+
+Dummy -> Object
+Compacted -> Object
+Evacuated -> Object
 
 Reserved -> JVM
 Committed -> JVM
@@ -152,6 +163,7 @@ JVMTI -> union {
     Alloc -> # bytes
   | InstanceKlassPtr -> 1 words
   | TagHashmapEntry -> # bytes
+  | CachedClassfileData -> # bytes
 }
 UnsafeAlloc -> # bytes
 NMTTesting -> # bytes
@@ -173,6 +185,11 @@ HumongousTrashed -> # bytes
 CompactibleSpaceForwardeePtr -> 1 words
 EvacuatedForwardeePtr -> 1 words
 UpdatedRefsForwardee -> 1 words
+ClassOopSizeFieldDummy -> # bytes
+G1CMMarkStack -> # bytes
+BitmapRegion -> # bytes
+CompactedForwardee -> # bytes
+HumongousForwardee -> # bytes
 
 %begin footer
 #endif
