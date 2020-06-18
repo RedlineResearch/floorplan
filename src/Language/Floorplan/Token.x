@@ -47,13 +47,16 @@ tokens :-
   [\*]         { \s -> TokenTimes }
   [\/]         { \s -> TokenDiv }
   [\^]         { \s -> TokenExponent }
+  "&&"         { \s -> TokenAndAnd }
+  "!"          { \s -> TokenBang }
+  "%transition" { \s -> TokenTransition }
   "%begin"     { \s -> TokenBeginScope }
   "%end"       { \s -> TokenEndScope }
   "%filterout" { \s -> TokenFilterOut } -- filter out rules
   noglobal     { \s -> TokenNoGlobal }
   \"[^\"]*\"   { \s -> TokenStringLiteral $ tail $ init s }
-  $digit+      { \s -> TokenNum (read s) }
-  0b [01]+     { \s -> TokenNum (bin2int s) }
+  $digit+      { \s -> TokenIntNum (read s) }
+  0b [01]+     { \s -> TokenBinNum (bin2int s) }
   [a-z] [$alpha $digit \_]* { \s -> TokenLowerID s }
   [A-Z] [$alpha $digit \_]* { \s -> TokenUpperID s}
 
@@ -91,12 +94,12 @@ data Token =
   | TokenTimes
   | TokenDiv
   | TokenExponent
-  | TokenNum Int
+  | TokenIntNum Int | TokenBinNum Int
   | TokenUpperID String
   | TokenLowerID String
   | TokenBeginScope | TokenEndScope | TokenNoGlobal
   | TokenStringLiteral String | TokenFilterOut
-  | TokenHeader String | TokenFooter String
+  | TokenHeader String | TokenFooter String | TokenTransition | TokenAndAnd | TokenBang
   deriving (Eq, Ord, Show)
 
 -- | Returns a tuple of all contents before the first instance of '%end' along with

@@ -1,10 +1,9 @@
 
 // Embedding in a project with 'header' / 'footer':
 %begin header
-#ifndef SHARE_NATIVE_FLP_TYPES_HPP                                                                                                                                                                                                          
+#ifndef SHARE_NATIVE_FLP_TYPES_HPP
 #define SHARE_NATIVE_FLP_TYPES_HPP
-
-%end // Blank line above intentional for generated style purposes.
+%end
 
 %begin noglobal // Definitions in some way referenced by JVM
 
@@ -14,6 +13,16 @@ Header @(1 words)@ -> union {
   | seq { MarkWord, KlassPtr }                  // 2 words
   | seq { MarkWord, NarrowKlass, KlassGap }     // 2 words
 }
+
+%transition Header 0 ( is_arr && !UseCompressedOops)
+%transition Header 1 ( is_arr &&  UseCompressedOops)
+%transition Header 2 (!is_arr && !UseCompressedOops)
+%transition Header 3 (!is_arr &&  UseCompressedOops)
+
+// transition_FLP_Header(qname, obj)
+// transition_Header(Evacuated_Object_Header, obj)
+
+// transition_FLP_Evacuated_Object_Header(obj)
 
 KlassWord -> union {
     seq { KlassPtr }

@@ -21,29 +21,32 @@ import Language.Floorplan.Token
     pages        { TokenPages }
     'ptr'        { TokenPtr }
     enum         { TokenEnum }
-    '->'  		   { TokenArrow }
-		'@('         { TokenAtParen }
-		')@'         { TokenParenAt }
-		'@|'         { TokenAtBar }
-		'|@'         { TokenBarAt }
-		'('          { TokenLParen }
-		')'          { TokenRParen }
-		'<'          { TokenLess }
-		'>'          { TokenGreater }
-		'<$'         { TokenLessD }
-		'$>'         { TokenGreaterD }
-		'|'          { TokenBar }
-		'||'         { TokenBarBar }
-		'{'          { TokenLCurl }
-		'}'          { TokenRCurl }
-		'#'          { TokenPound }
-		':'          { TokenColon }
-		','          { TokenComma }
-		'+'          { TokenPlus }
-		'-'          { TokenMinus }
-		'*'          { TokenTimes }
-		'/'          { TokenDiv }
-		'^'          { TokenExponent }
+    '->'  	     { TokenArrow }
+    '@('         { TokenAtParen }
+    ')@'         { TokenParenAt }
+    '@|'         { TokenAtBar }
+    '|@'         { TokenBarAt }
+    '('          { TokenLParen }
+    ')'          { TokenRParen }
+    '<'          { TokenLess }
+    '>'          { TokenGreater }
+    '<$'         { TokenLessD }
+    '$>'         { TokenGreaterD }
+    '|'          { TokenBar }
+    '||'         { TokenBarBar }
+    '{'          { TokenLCurl }
+    '}'          { TokenRCurl }
+    '#'          { TokenPound }
+    ':'          { TokenColon }
+    ','          { TokenComma }
+    '+'          { TokenPlus }
+    '-'          { TokenMinus }
+    '*'          { TokenTimes }
+    '/'          { TokenDiv }
+    '^'          { TokenExponent }
+    '!'          { TokenBang }
+    '%transition' { TokenTransition }
+    '&&'         { TokenAndAnd }
     header       { TokenHeader $$ } -- '%begin header' ... '%end'
     footer       { TokenFooter $$ } -- '%begin footer' ... '%end'
     '%begin'     { TokenBeginScope }
@@ -51,7 +54,8 @@ import Language.Floorplan.Token
     '%filterout' { TokenFilterOut }
     noglobal     { TokenNoGlobal }
     stringlit    { TokenStringLiteral $$ }
-    literal      { TokenNum $$ }
+    tokenint     { TokenIntNum $$ }
+    tokenbin     { TokenBinNum $$ }
     UpperID      { TokenUpperID $$ }
     LowerID      { TokenLowerID $$ }
 
@@ -72,6 +76,22 @@ decl  : layer                  { LayerDecl $1 }
       | '%begin' attrs         { ScopeDecl $2 }
       | '%end'                 { EndScopeDecl }
       | '%filterout' stringlit { FilterOutDecl $2 }
+      | '%transition' UpperID tokenint tdeclRHS { TransitionDecl $2 $3 $4 }
+
+-- Transition Decl
+tdeclRHS : UpperID                { BoolID $1 }
+         | '(' tdeclBoolExpr ')'  { $2 }
+
+tdeclBoolExpr : tdeclBoolExpr '&&' tdeclTerm  { BoolAnd $1 $3 }
+              | tdeclBoolExpr '||' tdeclTerm  { BoolOr  $1 $3 }
+              | tdeclTerm                     { $1 }
+
+tdeclTerm : '!' tdeclTerm                     { BoolNot $2 }
+          | progid                            { BoolID $1 }
+          | '(' tdeclBoolExpr ')'             { $2 }
+
+progid  : LowerID { $1 }
+        | UpperID { $1 }
 
 -- One or more
 attrs : attr       { [$1] }
@@ -89,7 +109,7 @@ attr : noglobal { NoGlobalAttr }
 {- Floorplan layers -}
 
 layers 	: {- empty -}  { [] }
-				| layers layer { $2 : $1 }
+                        | layers layer { $2 : $1 }
 
 layerID 	: UpperID { $1 }
 fieldID 	: LowerID { $1 }
@@ -175,6 +195,9 @@ bitsExps : bitsExp { [$1] }
          | bitsExps ',' bitsExp     { $3 : $1 }
 
 bitsExp  : flagID ':' sizeArith { ($1, $3) }
+
+literal : tokenbin  { $1 }
+        | tokenint  { $1 }
 
 {- ------------------------------------------------------------------------- -}
 

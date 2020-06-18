@@ -1,3 +1,4 @@
+/.vscode
 /*.c
 /dist
 Cargo.lock

@@ -4,7 +4,7 @@ import Language.Floorplan.Syntax
 import Language.Floorplan.Preproc.Types
 
 import qualified Data.Map.Strict as M
-import Data.List (sort, nub)
+import Data.List (sort, nub, tails)
 import Data.Maybe (fromJust, isJust)
 import Debug.Trace as D
 
@@ -14,6 +14,58 @@ import Text.RE.TDFA.String (RE(..), compileRegex)
 --import Prelude hiding (catch)
 import GHC.IO.Exception
 import Control.Exception (catch)
+
+uniquePairs :: [a] -> [(a,a)]
+uniquePairs lst = [ (x,y) | (x:ys) <- tails lst, y <- ys ]
+
+-- | The two bool expressions compute different truth tables over the free-variables of
+--   the two expressions (at least one True/False or False/True).
+notIdentical :: BoolExpr -> BoolExpr -> Bool
+notIdentical b1 b2 =
+  any id [ r1 /= r2
+      | let free_vars = nub $ (onlyBoolIDs b1 ++ onlyBoolIDs b2)
+      , assignment <- sequence $ replicate (length free_vars) [True, False]
+      , let ctx = zip free_vars assignment
+      , let r1 = evalBool ctx b1
+      , let r2 = evalBool ctx b2
+      ]
+
+transitionAnalysis :: [Decl] -> ([PreprocError], Transitions)
+transitionAnalysis ds = let
+    
+    ts :: [(String, Int, BoolExpr)]
+    ts = onlyTransitions ds
+
+    unique_ns :: [String]
+    unique_ns = nub $ map (\(n,_,_) -> n) ts
+
+    -- | Each `fst` (name) in this list is unique, paired with all the corresponding
+    --   transition declarations seen for that name in the input program.
+    uniques :: [(String, [(Int, BoolExpr)])]
+    uniques = [ (n, pairs)
+              | n <- unique_ns
+              , let pairs = map (\(_,b,c) -> (b,c)) $ filter (\(n',_,_) -> n' == n) ts
+              ]
+
+    disjointUnionNums :: Transitions -> [PreprocError]
+    disjointUnionNums [] = [] -- No errors
+    disjointUnionNums ((n, []) : rest) = disjointUnionNums rest
+    disjointUnionNums ((n, (union_num, bool_expr) : pairs) : rest)
+      | union_num `elem` (map fst pairs) = [DuplicateTransitionNum n union_num]
+      | otherwise = disjointUnionNums rest
+    
+    disjointBoolExprs :: [PreprocError]
+    disjointBoolExprs = let
+        dBE (n, []) = [] -- No errors
+        dBE (n, pairs) =
+          [ IdenticalBools n b1 b2
+          | (b1, b2) <- uniquePairs (map snd pairs)
+          , not (notIdentical b1 b2) -- Find ones that *are* identical (double not)
+          ]
+      in concatMap dBE uniques
+
+  in (disjointUnionNums uniques ++ disjointBoolExprs, uniques)
+
 
 -- TODO: analysis to check for multiple header / footer declarations in the input. Unless
 -- we want to just output headers / footers in the order in which they appear in the input file.
@@ -124,7 +176,7 @@ graftingAnalysis ds_init = let
           case lookup lid of
             Left err -> [err]
             Right (Field _ d) -> gr (lid : as) d
-            Right (l@(Layer{})) -> D.trace lid $ gr (lid : as) (rhs l)
+            Right (l@(Layer{})) -> {- D.trace lid $ -} gr (lid : as) (rhs l)
 
     gr_decl (LayerDecl d) = gr [] d
     gr_decl _ = []

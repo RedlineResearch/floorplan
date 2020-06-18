@@ -26,6 +26,7 @@ import qualified Language.Floorplan.Core.Syntax as CS
 
 import qualified Language.Floorplan.C.Compiler as CComp
 import qualified Language.Floorplan.Preproc.Passes as Preproc
+import qualified Language.Floorplan.Preproc.Types as PreprocT
 
 usage = do
   pName <- getProgName
@@ -38,7 +39,7 @@ validateAnalysis [] = return ()
 validateAnalysis xs = P.putStrLn (show xs) >> exitFailure
 
 -- | Returns a tuple (for now just the [RE]) of the results of analyses with computed results.
-doAnalyses :: [Decl] -> IO ([RE], String, String)
+doAnalyses :: [Decl] -> IO ([RE], String, String, PreprocT.Transitions)
 doAnalyses result = do
   (errors, regexes) <- partitionEithers <$> Preproc.regexAnalysis result
   validateAnalysis     errors
@@ -46,14 +47,20 @@ doAnalyses result = do
   validateAnalysis  $  Preproc.graftingAnalysis result
   let (err, header, footer) = Preproc.headFootAnalysis result
   validateAnalysis     err
-  return (regexes, header, footer)
+  let (err, transitions) = Preproc.transitionAnalysis result
+  validateAnalysis     err
+  return (regexes, header, footer, transitions)
 
 --print $ pretty' sf
+
+rustNoSupport :: Bool -> String -> IO ()
+rustNoSupport True  s = P.putStrLn $ "Warning: Rust output mode does not support " ++ s ++ ". Ignoring."
+rustNoSupport False s = return ()
 
 doResult :: CompilerOutput -> FilePath -> [Decl] -> IO ()
 doResult Unknown outputFile _ = P.putStrLn ("Error: File type unknown '" ++ outputFile ++ "'") >> usage
 doResult out_type outputFile result = do
-  (filterOutRegexes, header, footer) <- doAnalyses result
+  (filterOutRegexes, header, footer, transitions) <- doAnalyses result
   P.putStrLn ("No grafting errors. Proceeding to graft.")
   let layers   :: [S.Demarc]      = Preproc.removeNoGlobalPass result
       grafted  :: [S.Demarc]      = map (Preproc.grafting $ onlyLayers result) layers
@@ -61,16 +68,15 @@ doResult out_type outputFile result = do
   assert (CC.countGrafting grafted == 0) (return ())
   P.putStrLn ("Grafting completed.")
   case out_type of
-    RustOutput -> do  sf :: SourceFile Span <- return $ RC.genRust core_flp
-                      if length filterOutRegexes > 0
-                        then P.putStrLn "Warning: Rust output mode does not support filtering regular expressions. Ignoring."
-                        else return ()
-                      if length header > 0 || length footer > 0
-                        then P.putStrLn "Warning: Rust output mode does not support headers or footers. Ignoring."
-                        else return ()
-                      (RC.writeModule outputFile) sf
-    COutput    -> do  sf <- return $ CComp.genC core_flp filterOutRegexes
-                      (CComp.writeCFile outputFile (header, footer)) sf
+    RustOutput ->
+      do  sf :: SourceFile Span <- return $ RC.genRust core_flp
+          rustNoSupport (length filterOutRegexes > 0) "filtering regular expressions"
+          rustNoSupport (length header > 0 || length footer > 0) "headers or footers"
+          rustNoSupport (length transitions > 0) "'%transition' declarations"
+          (RC.writeModule outputFile) sf
+    COutput ->
+      do  sf <- return $ CComp.genC core_flp filterOutRegexes transitions
+          (CComp.writeCFile outputFile (header, footer)) sf
   exitSuccess
 
 oops s = P.putStr s >> exitFailure

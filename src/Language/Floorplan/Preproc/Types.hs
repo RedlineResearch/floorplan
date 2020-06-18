@@ -13,4 +13,9 @@ data PreprocError =
   | UnbalancedScope Int                 -- ^ %begin / %end are unbalanced.
   | RegexError String                   -- ^ A regex was unable to be compiled.
   | InvalidAttribute String             -- ^ String is an error message.
+  | DuplicateTransitionNum String Int   -- ^ Must reference unique alternatives in a transition union case
+  | IdenticalBools String BoolExpr BoolExpr
   deriving (Eq, Ord, Show)
+
+type Transition = (String, [(Int, BoolExpr)])
+type Transitions = [Transition]

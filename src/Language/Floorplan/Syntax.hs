@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric, DeriveDataTypeable #-}
 module Language.Floorplan.Syntax where
 
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, fromJust)
 
 type LayerID  = String -- upper
 type FormalID = String -- lower
@@ -33,12 +33,49 @@ data Decl =
   | FilterOutDecl String  -- ^ The 'String' is the regex
   | HeaderDecl String     -- ^ C-like or Rust-like code
   | FooterDecl String     -- ^ C-like or Rust-like code
+  | TransitionDecl String Int BoolExpr
   deriving (Eq, Ord, Show)
+
+-- | Constrain the form of transition bool expressions so that we can write an
+--   analysis pass which warns when they overlap or have missing cases.
+data BoolExpr =
+    BoolAnd BoolExpr BoolExpr
+  | BoolOr  BoolExpr BoolExpr
+  | BoolNot BoolExpr
+  | BoolID  String
+  deriving (Eq, Ord, Show)
+
+onlyBoolIDs :: BoolExpr -> [String]
+onlyBoolIDs (BoolID s) = [s]
+onlyBoolIDs (BoolAnd b1 b2) = onlyBoolIDs b1 ++ onlyBoolIDs b2
+onlyBoolIDs (BoolOr b1 b2) = onlyBoolIDs b1 ++ onlyBoolIDs b2
+onlyBoolIDs (BoolNot b) = onlyBoolIDs b
+
+-- | Context must define all free variables of the bool expression.
+evalBool :: [(String, Bool)] -> BoolExpr -> Bool
+evalBool ctx be = let
+    eB :: BoolExpr -> Bool
+    eB (BoolID s) = fromJust $ lookup s ctx
+    eB (BoolAnd b1 b2) = eB b1 && eB b2
+    eB (BoolOr b1 b2) = eB b1 || eB b2
+    eB (BoolNot b) = not (eB b)
+  in eB be
+
+printBoolExpr :: BoolExpr -> String
+printBoolExpr (BoolID s) = s
+printBoolExpr (BoolAnd b1 b2) = "(" ++ printBoolExpr b1 ++ ") && (" ++ printBoolExpr b2 ++ ")"
+printBoolExpr (BoolOr b1 b2) = "(" ++ printBoolExpr b1 ++ ") && (" ++ printBoolExpr b2 ++ ")"
+printBoolExpr (BoolNot b) = "!(" ++ printBoolExpr b ++ ")"
 
 onlyLayers :: [Decl] -> [Demarc]
 onlyLayers (LayerDecl d : ds) = d : onlyLayers ds
 onlyLayers (_ : ds) = onlyLayers ds
 onlyLayers [] = []
+
+onlyTransitions :: [Decl] -> [(String, Int, BoolExpr)]
+onlyTransitions (TransitionDecl s i b : ds) = (s,i,b) : onlyTransitions ds
+onlyTransitions (_ : ds) = onlyTransitions ds
+onlyTransitions [] = []
 
 onlyFilterOuts :: [Decl] -> [String]
 onlyFilterOuts (FilterOutDecl s : ds) = s : onlyFilterOuts ds

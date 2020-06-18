@@ -2,6 +2,7 @@
 module Language.Floorplan.Core.Syntax where
 
 import Data.Maybe (maybeToList)
+import Data.List (nub)
 
 import Language.Floorplan.Syntax (LayerID, FormalID, FlagID, FieldID, SizeArith(..))
 
@@ -113,6 +114,20 @@ expSize (_ ::: e) = expSize e
 expSize (Exists _ e) = expSize e
 expSize (_ :# _) = Nothing -- Conservative assumption
 expSize (Attr _ e) = expSize e
+
+-- | Like `expSize`, but don't require a single unique size. A 'Nothing' in the output
+--   list implies there was a repetition, but not that that repetition is *necessarily*
+--   unbounded. This function does not compute satisfying sizes the way a SAT-solver might.
+expSizes :: Exp a -> [Maybe Int]
+expSizes (Prim n) = [Just n]
+expSizes (Con n _) = [Just n]
+expSizes (e :@ _) = expSizes e
+expSizes (e1 :+ e2) = nub [ s1 `plus` s2 | s1 <- expSizes e1, s2 <- expSizes e2 ]
+expSizes (e1 :|| e2) = nub (expSizes e1 ++ expSizes e2)
+expSizes (_ ::: e) = expSizes e
+expSizes (Exists _ e) = expSizes e
+expSizes (_ :# _) = [Nothing] -- Conservative assumption
+expSizes (Attr _ e) = expSizes e
 
 -- | Just like @accum@, but also tracks the number of bytes of memory
 --   that come before the subexpression for which we call the fncn.
