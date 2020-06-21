@@ -12,6 +12,7 @@ import Language.C.Quote
 import qualified Language.C.Parser as P
 import qualified Language.C.Parser.Tokens as T
 import qualified Language.C.Syntax as C
+import Language.Floorplan.C.Analysis
 
 import qualified Language.C.Pretty as PrettyC
 import Text.PrettyPrint.Mainland (prettyLazyText)
@@ -40,19 +41,9 @@ import Text.RE.TDFA.String (RE(..), (?=~), matched)
 fakeLoc = noLoc --Span (Position 0 0 0) (Position 0 0 0)
 fL = fakeLoc
 
-justName :: [([NameID], BaseExp)] -> BaseExp -> Maybe ([NameID], BaseExp)
-justName [] (n ::: e) = Just ([n], e)
-justName ((ns,_):_) (n ::: e) = Just (n : ns, e)
-justName _ _ = Nothing
-
 justNameExp :: BaseExp -> Maybe (NameID, BaseExp)
 justNameExp (n ::: e) = Just (n, e)
 justNameExp _ = Nothing
-
--- | Get all of the unique name identifiers in the spec and their
---   corresponding subexpression.
-findNames :: [BaseExp] -> [([NameID], BaseExp)]
-findNames = nub . concatMap (accumTopDown justName)
 
 mkInitConst s = (Nothing, ExpInitializer (Const s fL) fL)
 
@@ -90,12 +81,12 @@ mkAllPrefixes bes res = let
 
     -- Tuples of the constructed type identifier and the list of names from which it was constructed.
     types0 :: [String]
-    types0 = map mkTypeIdentifier ns
+    types0 = map (mkTypeIdentifier . fst) ns
 
     findFor :: String -> [(([NameID], BaseExp), Maybe String)] -> [String]
     findFor u []      = []
-    findFor u ((tuple@(n_qual, _), Just _):ns0) -- Not filtered out - make and keep the identifier if it involves the type 'u'.
-      | u `elem` n_qual = mkTypeIdentifier tuple : findFor u ns0
+    findFor u (((n_qual, _), Just _):ns0) -- Not filtered out - make and keep the identifier if it involves the type 'u'.
+      | u `elem` n_qual = mkTypeIdentifier n_qual : findFor u ns0
       | otherwise       = findFor u ns0
     findFor u (((_, _), Nothing):ns0) = findFor u ns0 -- This particular name is filtered out, as indicated by the Nothing
 
@@ -104,30 +95,6 @@ mkAllPrefixes bes res = let
       = MacroDef ("FLP_ALL_" ++ unique_ty) [] (StmtsBody [NameListM $ map ("FLP_" ++) paths])
 
   in map mkAll (zip uniques (map (\f -> f $ zip ns (doFilterOut types0 res)) (map findFor uniques)))
-
--- | (["A", "B", "C"], _) becomes "C_B_A"
-mkTypeIdentifier :: ([NameID], BaseExp) -> String
-mkTypeIdentifier = concat . intersperse "_" . reverse . fst
-
--- For now everything needs to have an explicit name, but once the codegen is working
--- smoothly we should relax this restriction and reference a library of primitive
--- transitions and types in the generated C code for specs which don't wish to give
--- an explicit name to everything (such as for padding, though it seems like good
--- memory layout hygiene to specify these names anyways).
-getSeqs :: BaseExp -> [ (Maybe NameID, BaseExp) ]
-getSeqs be@(Prim _) = error $ "Unimplemented getSeqs: " ++ show be
-getSeqs (Con _ be) = getSeqs be
-getSeqs (be :@ _) = getSeqs be
-getSeqs (e1 :+ e2) = getSeqs e1 ++ getSeqs e2
--- TODO: this case implies more than one sequence, meaning the return type might need to be adjusted...:
-getSeqs be@(e1 :|| e2) = error $ "Unimplemented getSeqs: " ++ show be
-getSeqs (n ::: be) = [ (Just n, be) ]
-getSeqs (Exists _ be) = getSeqs be
-getSeqs be@(n :# be') = error $ "Unimplemented getSeqs: " ++ show be
-getSeqs be@(FLPS.Attr (BaseType (EnumBT _)) be') = error $ "Unimplemented getSeqs: " ++ show be
-getSeqs be@(FLPS.Attr (BaseType (BitsBT _)) be') = error $ "Unimplemented getSeqs: " ++ show be
-getSeqs be@(FLPS.Attr (BaseType (PtrBT _)) be')  = error $ "Unimplemented getSeqs: " ++ show be
-getSeqs be@(FLPS.Attr (BaseType (SizeBT _)) be') = error $ "Unimplemented getSeqs: " ++ show be
 
 -- | Get an ordered list of the alternatives which make up this expression
 --   and also (safely) pushing constraints down into the returned BaseExps
@@ -168,6 +135,9 @@ data MacroStmt =
   | ShadowSet MapID AddressExp TypeID SizeExp
   | CallM     String   [MacroExp] -- Call another function or macro.
   | NameListM [String] -- A comma-separated list of names, without any surrounding brackets
+  | BlockStmt [MacroStmt]
+  | PlusEq    String MacroExp -- s += exp;
+  | InitStmt  String String (Maybe MacroExp) -- e.g., 'unsigned int x = 0;' or just 'unsigned int x;'
   deriving (Eq, Ord, Show)
 
 data MacroBody =
@@ -188,20 +158,33 @@ printMacro (MacroDef name args body)
 
 printBody :: Int -> MacroBody -> String
 printBody c (StmtsBody []) = ""
+printBody c (StmtsBody [s@(BlockStmt _)]) = " \\\n" ++ printStmt c s -- Single block stmt indentation better when on a separate line
 printBody c (StmtsBody [stmt]) = printStmt c stmt
 printBody c (StmtsBody stmts) =
-  " \\\n" ++ (concat $ intersperse " \\\n" $ map (printStmtTabbed c) stmts)
+  " \\\n" ++ (concat $ intersperse " \\\n" $ map (printTabbed printStmt c) stmts)
 printBody c (ExpBody e) = "(" ++ printExp e ++ ")"
 
-printStmtTabbed cnt = ((replicate cnt ' ') ++) . printStmt cnt
+printTabbed :: (Int -> a -> String) -> Int -> (a -> String)
+printTabbed fncn cnt = ((replicate cnt ' ') ++) . fncn cnt
 
+printTabbedS :: Int -> (String -> String)
+printTabbedS cnt = ((replicate cnt ' ') ++)
+
+printStmt :: Int -> MacroStmt -> String
 printStmt c (IfM be ms) =
-  "if (" ++ printBoolExpr be ++ ") { \\\n" ++ concat (intersperse " \\\n" $ map (printStmtTabbed $ c+2) ms) ++ " }"
-printStmt c (ElifM be ms) = "else if (" ++ printBoolExpr be ++ ") { \\\n" ++ concat (intersperse " \\\n" $ map (printStmtTabbed $ c+2) ms) ++ "  }"
+  "if (" ++ printBoolExpr be ++ ") { \\\n" ++ concat (intersperse " \\\n" $ map (printTabbed printStmt $ c+2) ms) ++ " }"
+printStmt c (ElifM be ms) = "else if (" ++ printBoolExpr be ++ ") { \\\n" ++ concat (intersperse " \\\n" $ map (printTabbed printStmt $ c+2) ms) ++ "  }"
 printStmt c (ShadowSet mid addr typ sz) = "ShadowSet(" ++ show mid ++ ", " ++ printExp addr ++ ", " ++ typ ++ ", " ++ printExp sz ++ ");"
 printStmt c (CallM fncn args) = fncn ++ "(" ++ concat (intersperse "," $ map printExp args) ++ ")"
 printStmt c (NameListM ns) = concat $ intersperse ", " ns
+printStmt c (BlockStmt []) = error $ "Empty BlockStmt is suspect."
+printStmt c (BlockStmt [stmt]) = printTabbedS c "{ " ++ printStmt c stmt ++ " }"
+printStmt c (BlockStmt (s:ss))  = printTabbedS c "{ " ++ printStmt c s ++ " \\\n" ++ concat (intersperse " \\\n" $ map (printTabbed printStmt $ c+2) ss) ++ printTabbedS c "}"
+printStmt c (PlusEq lhs rhs) = printTabbedS c $ lhs ++ " += " ++ printExp rhs ++ ";"
+printStmt c (InitStmt typ varID Nothing) = printTabbedS c $ typ ++ " " ++ varID ++ ";"
+printStmt c (InitStmt typ varID (Just rhs)) = printTabbedS c $ typ ++ " " ++ varID ++ " = " ++ printExp rhs ++ ";"
 
+printExp :: MacroExp -> String
 printExp (ExpID s) = s
 printExp (PlusC e1 e2) = printExpSafe e1 ++ " + " ++ printExpSafe e2
 printExp (IntC i) = show i
@@ -228,38 +211,64 @@ prevSizes bes0 = let
 
   in reverse $ foldl mkAccum [] (pS bes0)
 
-baseRefParams :: [String]
-baseRefParams = ["qname_type", "addr"]
-
 baseRefName :: String -> String
 baseRefName n = "base_transition_FLP_" ++ n
 
-baseRefCall :: ([NameID], BaseExp) -> MacroStmt --String
-baseRefCall (n:[], be) = CallM (baseRefName n) [ExpID "__FLP_NO_ARG", ExpID "addr"]
-baseRefCall (n:ns, be) = CallM (baseRefName n) [ExpID $ '_' : mkTypeIdentifier (ns, be), ExpID "addr"]
+baseRefCall :: Bool -> ([NameID], BaseExp) -> MacroStmt --String
+baseRefCall is_explicit (n:[], be) = CallM (baseRefName n) $ [ExpID "__FLP_NO_ARG"] ++ map ExpID (transParams is_explicit be)
+baseRefCall is_explicit (n:ns, be) = CallM (baseRefName n) $ [ExpID $ '_' : mkTypeIdentifier ns] ++ map ExpID (transParams is_explicit be)
+
+-- | The entire size of the given BaseExp for every configuration. If two or more configurations disagree on
+--   the size (or allow for unbounded repetitions) then the size is parametrized.
+wholeSize :: BaseExp -> MacroExp
+wholeSize be =
+  case expSize be of
+    Nothing -> ExpID "size_in_bytes"
+    Just sz -> IntC sz
+
+transParams :: Bool -> BaseExp -> [String]
+transParams True  be = ["addr"]
+transParams False be = ["addr"] ++
+  case expSize be of
+    Nothing -> ["size_in_bytes"]
+    Just sz -> []
+
+explicitTransParams = transParams True
+implicitTransParams = transParams False
 
 explicitTransition :: [NameID] -> BaseExp -> [(Int, BoolExpr)] -> MacroDef
 explicitTransition qname be bool_exprs =
-  MacroDef ("transition_FLP_" ++ mkTypeIdentifier (qname, be)) ["addr"]
-    (StmtsBody [ baseRefCall (qname, be) ])
-  --[ EscDef ("#define transition_FLP_" ++ mkTypeIdentifier (qname, be) ++ "(addr) " ++ baseRefCall (qname, be)) fL
+  MacroDef ("transition_FLP_" ++ mkTypeIdentifier qname) (explicitTransParams be) --["addr"]
+    (StmtsBody [ baseRefCall True (qname, be) ])
+  --[ EscDef ("#define transition_FLP_" ++ mkTypeIdentifier qname ++ "(addr) " ++ baseRefCall (qname, be)) fL
   --]
 
 -- | TODO: normal transitions should handle all FLP decl forms. This is the same as explicitTransition
 implicitTransition :: [NameID] -> BaseExp -> MacroDef
-implicitTransition qname be =
-  MacroDef ("transition_FLP_" ++ mkTypeIdentifier (qname, be)) ["addr"]
-    (StmtsBody [ baseRefCall (qname, be) ])
-  --[ EscDef ("#define transition_FLP_" ++ mkTypeIdentifier (qname, be) ++ "(addr) " ++ baseRefCall (qname, be)) fL
+implicitTransition qname be = let
+
+    just_call = baseRefCall False (qname, be)
+
+    -- Consumed bytes initializer
+    consumed_init = InitStmt "size_t" "__flp_consumed_bytes" (Just $ IntC 0)
+
+    body | "size_in_bytes" `elem` transParams False be = [ just_call ]
+         | otherwise = [ BlockStmt [consumed_init, just_call] ]
+  in 
+    MacroDef ("transition_FLP_" ++ mkTypeIdentifier qname) (implicitTransParams be) --["addr"]
+      (StmtsBody body)
+  --[ EscDef ("#define transition_FLP_" ++ mkTypeIdentifier qname ++ "(addr) " ++ baseRefCall (qname, be)) fL
   --]
 
 -- | Inputs: top-level name, the entire subexpression, and the size in bytes of it.
 mkBaseRefMacro :: Bool -> Transitions -> NameID -> BaseExp -> [Maybe Int] -> MacroDef
 mkBaseRefMacro is_explicit explicit_ts n be _ = let
 
+    isExplicit' x = isExplicit x explicit_ts
+
     -- Make a single ShadowSet call based on number of bytes prior to this call.
     mkOneSet :: (MacroExp, (Int, (Maybe NameID, BaseExp))) -> MacroStmt
-    mkOneSet (prev_sz, (field_num, (Nothing, be'))) = error $ "Unimplemented ifThenElse: " ++ n ++ "(" ++ show be' ++ ")"
+    mkOneSet (prev_sz, (field_num, (Nothing, be'))) = error $ "Unimplemented mkOneSet: " ++ n ++ "(" ++ show be' ++ ")"
     mkOneSet (prev_sz, (field_num, (Just sub_n, be'))) = let
           curr_sz =
             case expSize be' of
@@ -272,14 +281,12 @@ mkBaseRefMacro is_explicit explicit_ts n be _ = let
           --[ EscDef ("    ShadowSet(0, " ++ addr_ref ++ ", " ++ curr_name  ++ ", " ++ curr_sz ++ "); \\") fL
           --]
 
-
     -- TODO: more useful error messages when input is ill-formed or something is currently unimplemented.
     lookupAlt :: NameID -> Int -> BoolExpr
-    lookupAlt n i =
-      case (lookup n explicit_ts) of
-        Nothing -> error $ "Error - '" ++ n ++ "' is not actually explicitly specified for transitions."
-        Just x ->
-          case lookup i x of
+    lookupAlt n i
+      | not (isExplicit n explicit_ts) = error $ "Error - '" ++ n ++ "' is not actually explicitly specified for transitions."
+      | otherwise =
+          case lookup i (fromJust $ lookup n explicit_ts) of
             Nothing -> error $ "Error - explicit transition for type '" ++ n ++ "' does not specify "
                                 ++ "type of alternative " ++ show i
             Just be -> be
@@ -294,20 +301,57 @@ mkBaseRefMacro is_explicit explicit_ts n be _ = let
     getIfStmt 0 = IfM (lookupAlt n 0)
     getIfStmt alt_num = ElifM (lookupAlt n alt_num)
 
-    wholeSize :: MacroExp
-    wholeSize =
-      case expSize be of
-        Nothing -> ExpID "size_in_bytes"
-        Just sz -> IntC sz
-
     mFBR :: (Int, (Maybe NameID, [ (Maybe NameID, BaseExp) ])) -> MacroStmt
     mFBR (alt_num, (Just n', [(_, be)])) = getIfStmt alt_num $ singletonBranch n' be
     mFBR (alt_num, (Nothing, cases)) = getIfStmt alt_num $ map mkOneSet $ zip (prevSizes $ map snd cases) (zip [0..length cases - 1] cases)
 
-    implicit_set = ShadowSet 0 (CastC "ShadowAddr" $ ExpID "addr") ("FLP##qname_type" ++ "##_" ++ n) wholeSize
+    single_implicit_set = ShadowSet 0 (CastC "ShadowAddr" $ ExpID "addr") ("FLP##qname_type" ++ "##_" ++ n) (wholeSize be)
 
-    def | is_explicit = MacroDef (baseRefName n) baseRefParams $ StmtsBody (map mFBR $ zip [0..] (getAltSeqs be))
-        | otherwise   = MacroDef (baseRefName n) baseRefParams $ StmtsBody [implicit_set]
+    implicit_set
+      | "size_in_bytes" `elem` transParams False be = single_implicit_set
+      | otherwise = BlockStmt [ single_implicit_set, PlusEq "__flp_bytes_consumed" (wholeSize be)]
+
+    seqs :: [(Maybe NameID, BaseExp)]
+    seqs = getSeqs be
+
+    -- Auto-filling semantics with a "size_in_bytes" parameter passed to a type with only
+    -- one branch that has an indeterminate size in a sequence of two or more pieces of memory.
+    seqAutoFillBody :: MacroBody
+    seqAutoFillBody = let
+
+        -- TODO: Continue here for auto-filling transition bodies.
+        sAFB :: (Maybe Int, (Maybe NameID, BaseExp)) -> MacroStmt
+        sAFB (Just sz, (Just n_sub, be_sub))
+          | isExplicit' n_sub = error $ "TODO: " ++ show be_sub
+          | otherwise         = error $ "TODO: " ++ show be_sub
+
+      in StmtsBody $ map sAFB $ zip (map (expSize.snd) seqs) seqs
+
+    -- The list contains exactly one expression with a single free-variable.
+    --isOneFill :: [(Maybe NameID, BaseExp)] -> Bool
+    --isOneFill [] = False
+    --isOneFill (n, be):bes
+    --  | isExplicit n && all (/= Nothing) (expSizes be) = isOneFill bes
+    --  | isExplicit n                                   = isZeroFill bes
+
+    implicit_body = StmtsBody [implicit_set]
+    --  | length seqs == 0 = error $ "Fatal Error: getSeqs cannot return an empty list. BaseExp is this: " ++ show be
+      -- There's only one big thing to work with - just set it at the current type level:
+    --  | length seqs == 1 = StmtsBody [implicit_set]
+      -- There's only one free-variable in a sequence of 2 or more things.
+    --  | isOneFill seqs = seqAutoFillBody --length (filter (== Nothing) $ map (expSize.snd) seqs) == 1 = seqAutoFillBody
+      -- TODO: 'Object' consists of an explicit 'Header' which will support bytes_consumed based on the fact that
+      -- each branch contains a fixed number of bytes (varied across branches). I need to restructure this codegen
+      -- to associate attributes with each of the BaseExp expressions such that I don't have to keep re-figuring out
+      -- how to determine the interface supported by a particular type. It's a bit like how the Rust code is generated
+      -- where functions get associated with 'impls' but in this case it's with respect to the "capabilities" of a
+      -- type to be able to support some mode memory sizes (particularly fixed vs unbounded and the explicit vs implicit
+      -- constructions I've come up with which determine the kind of interface generated). Each node in the BaseExp should
+      -- be labeled with whether or not it's explicit/implicit, and the fixity/boundedness of subexpressions.
+    --  | otherwise = StmtsBody [implicit_set]
+
+    def | is_explicit = MacroDef (baseRefName n) (baseRefParams True be) $ StmtsBody (map mFBR $ zip [0..] (getAltSeqs be))
+        | otherwise   = MacroDef (baseRefName n) (baseRefParams False be) $ implicit_body
 
   in def
 
@@ -342,7 +386,8 @@ mkTransitions qual_ns ts = let
 
 genC :: [BaseExp] -> [RE] -> Transitions -> ([S.Definition], [MacroDef])
 genC bes res transitions = let
-    types0 = map mkTypeIdentifier (findNames bes)
+    mp = mkAnalysisMap bes res transitions
+    types0 = map (mkTypeIdentifier . fst) (findNames bes)
     types = "FLP_UNMAPPED" : (map ("FLP_" ++) $ catMaybes $ doFilterOut types0 res)
     num_types = MacroDef "__FLP_NUM_VALID_TYPES" [] (ExpBody $ CastC "unsigned int" $ IntC $ length types)
     xs    = map (mkInitConst . mkStrConst) types
