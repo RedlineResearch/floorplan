@@ -60,6 +60,9 @@ TLAB -> union {
 
 JavaHeap -> union { ArrayObj | ClassObj }
 
+%transition JavaHeap 0 ( is_arr)
+%transition JavaHeap 1 (!is_arr)
+
 // TODO - these two definitions share conflicting headers.
 ClassObj -> seq { Header, # Prim }
 ArrayObj -> seq {
@@ -109,7 +112,7 @@ Humongous -> union {
 // of the underlying memory in words, but not the variant.
 Object -> seq { Header, # words }
 
-Dummy -> Object
+Dummy     -> Object
 Compacted -> Object
 Evacuated -> Object
 

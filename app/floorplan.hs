@@ -75,7 +75,7 @@ doResult out_type outputFile result = do
           rustNoSupport (length transitions > 0) "'%transition' declarations"
           (RC.writeModule outputFile) sf
     COutput ->
-      do  sf <- return $ CComp.genC core_flp filterOutRegexes transitions
+      do  sf <- CComp.genC core_flp filterOutRegexes transitions
           (CComp.writeCFile outputFile (header, footer)) sf
   exitSuccess
 
