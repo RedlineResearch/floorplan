@@ -53,7 +53,7 @@ mkInitConst s = (Nothing, ExpInitializer (Const s fL) fL)
 mkStrConst t = S.StringConst ['"' : t ++ "\""] t fakeLoc
 
 mkPoundDefs' :: Int -> [NameID] ->  [MacroDef]
-mkPoundDefs' i (n:ns) = (MacroDef n [] $ ExpBody $ CastC "unsigned int" $ IntC i) : (mkPoundDefs' (i+1) ns)
+mkPoundDefs' i (n:ns) = (MacroDef n [] $ ExpBody True $ CastC "__FLP_Entry" $ IntC i) : (mkPoundDefs' (i+1) ns)
 mkPoundDefs' _ [] = []
 
 mkPoundDefs = mkPoundDefs' 0
@@ -111,14 +111,15 @@ wholeSize be =
     Just sz -> IntC sz
 
 baseRefCall :: LabelMap -> ([NameID], BaseExp) -> MacroStmt --String
-baseRefCall mp (n:[], be) = CallM (baseRefName n) $ [ExpID "__FLP_NO_ARG"] ++ map ExpID (n `trans_params` mp)
+baseRefCall mp (n:[], be) = CallM (baseRefName n) $ [ExpNoArg] -- This is the "empty" case (empty qualified name)
+                                              ++ map ExpID (n `trans_params` mp)
 baseRefCall mp (n:ns, be) = CallM (baseRefName n) $ [ExpID $ '_' : mkTypeIdentifier ns] ++ map ExpID (n `trans_params` mp)
 
 -- | Inputs: top-level name, the entire subexpression, and the size in bytes of it.
 mkBaseRefMacro :: LabelMap -> (NameID, BaseExp) -> State CompilerEnv MacroDef
 mkBaseRefMacro mp (n, be) = let
 
-    {- -- Make a single ShadowSet call based on number of bytes prior to this call.
+    {- -- Make a single PSet call based on number of bytes prior to this call.
     mkOneSet :: (MacroExp, (Int, (Maybe NameID, BaseExp))) -> MacroStmt
     mkOneSet (prev_sz, (field_num, (Nothing, be'))) = error $ "Unimplemented mkOneSet: " ++ n ++ "(" ++ show be' ++ ")"
     mkOneSet (prev_sz, (field_num, (Just sub_n, be'))) = let
@@ -126,7 +127,7 @@ mkBaseRefMacro mp (n, be) = let
             case expSize be' of
               Nothing -> ExpID $ "param_" ++ show field_num
               Just sz -> IntC sz
-      in  ShadowSet 0
+      in  PSet 0
             (PlusC (CastC "ShadowAddr" $ ExpID "addr") prev_sz)
             ("FLP##qname_type##_" ++ n ++ "_" ++ sub_n)
             curr_sz -}
@@ -164,7 +165,7 @@ mkBaseRefMacro mp (n, be) = let
     mFBR fls addrN (alt_num, (Nothing, cases)) = getIfStmt alt_num $ map (mkOneCall fls addrN) $ zip [0..length cases - 1] cases
 
     single_implicit_set :: String -> MacroStmt
-    single_implicit_set addrN = ShadowSet 0 (ExpID addrN) ("FLP##qname_type##_" ++ n) (wholeSize be)
+    single_implicit_set addrN = PSet 0 (ExpID addrN) ("FLP##qname_type##_" ++ n) (wholeSize be)
 
     implicit_set :: String -> MacroStmt
     implicit_set addrN
@@ -222,13 +223,13 @@ mkBaseRefMacro mp (n, be) = let
           | isNothing (expSize be_sub) = BlockStmt -- Variable sized sub-layout
               [ -- This InitStmt can get large, so store it in a local variable since it gets used twice.
                 InitStmt "size_t" "__flp_local_sz" (Just $ MinusC (ExpID "size_in_bytes") mkFillSizeOthers)
-              , ShadowSet 0
+              , PSet 0
                   (PlusC (ExpID addrN) (MinusC (ExpID "__flp_bytes_consumed") (ExpID fls)))
                   ("FLP##qname_type##_" ++ n) (ExpID "__flp_local_sz")
               , PlusEq "__flp_bytes_consumed" (ExpID "__flp_local_sz")
               ] 
           | otherwise = BlockStmt -- Fixed-size sub-layout
-              [ ShadowSet 0
+              [ PSet 0
                   (PlusC (ExpID addrN) (MinusC (ExpID "__flp_bytes_consumed") (ExpID fls)))
                   ("FLP##qname_type##_" ++ n) (IntC $ fromJust $ expSize be_sub)
               , PlusEq "__flp_bytes_consumed" (IntC $ fromJust $ expSize be_sub)
@@ -284,16 +285,17 @@ genC bes res transitions = let
     mp = mkAnalysisMap bes res transitions
     types0 = map (mkTypeIdentifier . fst) (findNames bes)
     types = "FLP_UNMAPPED" : (map ("FLP_" ++) $ catMaybes $ doFilterOut types0 res)
-    num_types = MacroDef "__FLP_NUM_VALID_TYPES" [] (ExpBody $ CastC "unsigned int" $ IntC $ length types)
+    num_types = MacroDef "__FLP_NUM_VALID_TYPES" [] (ExpBody True $ CastC "__FLP_Entry" $ IntC $ length types)
     xs    = map (mkInitConst . mkStrConst) types
     pound_defs = mkPoundDefs types
     initializer = CompoundInitializer xs fL
     all_prefixes = mkAllPrefixes bes res
-    noarg = MacroDef "__FLP_NO_ARG" [] (StmtsBody [])
+    --noarg = MacroDef "__FLP_NO_ARG" [] (StmtsBody [])
+    typ_typedef = MacroDef "__FLP_Entry" [] (ExpBody False $ ExpID "unsigned short int")
     (transition_defs,_) = runState (mkTransitions mp (findNames bes)) (CompilerEnv 0)
   in return ([cunit|
                 static const char* const __FLP_TYPES[] = $init:initializer;
-            |], noarg : pound_defs ++ [num_types] ++ all_prefixes ++ transition_defs)
+            |], typ_typedef : pound_defs ++ [num_types] ++ all_prefixes ++ transition_defs)
 
 -- | The pair of strings are the header and footer and to append
 writeCFile :: FilePath -> (String, String) -> ([S.Definition], [MacroDef]) -> IO ()

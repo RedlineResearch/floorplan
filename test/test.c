@@ -4,7 +4,7 @@
 
 typedef long long unsigned int ShadowAddr;
 
-void ShadowSet(int map, ShadowAddr addr, unsigned int type, size_t size) {
+void PSet(int map, ShadowAddr addr, unsigned int type, size_t size) {
   printf("ShadowSet: %d, %p, %s, %zu\n", map, addr, __FLP_TYPES[type], size);
 }
 

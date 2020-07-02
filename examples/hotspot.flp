@@ -113,8 +113,13 @@ Humongous -> union {
 Object -> seq { Header, # words }
 
 Dummy     -> Object
-Compacted -> Object
+Compacted -> union { Object | Trash -> # words }
 Evacuated -> Object
+
+// Corresponds to both the boxed on-heap object representing a String Klass
+// in Hotspot, as well as the header fields and character-array accompanying
+// an in-memory instance of an arrayOopDesc in Hotspot.
+String    -> union { Object | ObjPtr | # Char }
 
 Reserved -> JVM
 Committed -> JVM
@@ -202,6 +207,30 @@ G1CMMarkStack -> # bytes
 BitmapRegion -> # bytes
 CompactedForwardee -> # bytes
 HumongousForwardee -> # bytes
+MakeTrash -> # bytes
+Shenandoah -> union {
+    AllocShared   -> # bytes
+  | AllocTLAB     -> # bytes
+  | AllocSharedGC -> # bytes
+  | AllocGCLAB    -> # bytes
+}
+
+Handle -> ObjPtr
+Zapped -> # bytes
+HandleExcess -> # bytes
+ObjPtr -> 1 words
+HandleListFresh -> # words
+ClassLoader -> ObjPtr
+Thread -> ObjPtr
+Universe -> ObjPtr
+ObjectMonitor -> ObjPtr
+Frame -> ObjPtr
+SystemDictionary -> ObjPtr
+JNI -> ObjPtr
+OopStorage -> ObjPtr
+InstanceKlass -> ObjPtr
+InstanceMirrorKlass -> ObjPtr
+ObjArrayKlass -> ObjPtr
 
 %begin footer
 #endif

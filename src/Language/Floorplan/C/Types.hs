@@ -16,17 +16,19 @@ type SizeExp = MacroExp
 -- | 'C' appendices indicate "calculation"
 data MacroExp =
     ExpID   String
+  | QExpID  [String]               -- Specialized ExpID where listed names are concatenated together with '_' inbetween.
   | PlusC   MacroExp MacroExp      -- Addition
   | MinusC  MacroExp MacroExp      -- Subtraction
   | IntC    Int                    -- Integer calculation
   | CastC   String MacroExp        -- Casting
   | TernaryIf BoolExpr MacroExp MacroExp -- Ternary if expression.
+  | ExpNoArg -- "Empty" expression (literally zero characters) for use in calls to macros
   deriving (Eq, Ord, Show)
 
 data MacroStmt =
     IfM       BoolExpr [MacroStmt]
   | ElifM     BoolExpr [MacroStmt]
-  | ShadowSet MapID AddressExp TypeID SizeExp
+  | PSet MapID AddressExp TypeID SizeExp
   | CallM     String   [MacroExp] -- Call another function or macro.
   | NameListM [String] -- A comma-separated list of names, without any surrounding brackets
   | BlockStmt [MacroStmt]
@@ -36,7 +38,7 @@ data MacroStmt =
 
 data MacroBody =
     StmtsBody [MacroStmt]
-  | ExpBody   MacroExp
+  | ExpBody   Bool MacroExp -- Bool is whether or not has enclosing parentheses
   deriving (Eq, Ord, Show)
 
 data MacroDef = MacroDef String [String] MacroBody
@@ -56,7 +58,8 @@ printBody c (StmtsBody [s@(BlockStmt _)]) = " \\\n" ++ printStmt c s -- Single b
 printBody c (StmtsBody [stmt]) = printStmt c stmt
 printBody c (StmtsBody stmts) =
   " \\\n" ++ (concat $ intersperse " \\\n" $ map (printTabbed printStmt c) stmts)
-printBody c (ExpBody e) = "(" ++ printExp e ++ ")"
+printBody c (ExpBody True e) = "(" ++ printExp e ++ ")"
+printBody c (ExpBody False e) = printExp e
 
 printTabbed :: (Int -> a -> String) -> Int -> (a -> String)
 printTabbed fncn cnt = ((replicate cnt ' ') ++) . fncn cnt
@@ -68,7 +71,7 @@ printStmt :: Int -> MacroStmt -> String
 printStmt c (IfM be ms) =
   "if (" ++ printBoolExpr be ++ ") { \\\n" ++ concat (intersperse " \\\n" $ map (printTabbed printStmt $ c+2) ms) ++ " }"
 printStmt c (ElifM be ms) = "else if (" ++ printBoolExpr be ++ ") { \\\n" ++ concat (intersperse " \\\n" $ map (printTabbed printStmt $ c+2) ms) ++ "  }"
-printStmt c (ShadowSet mid addr typ sz) = "ShadowSet(" ++ show mid ++ ", " ++ printExp addr ++ ", " ++ typ ++ ", " ++ printExp sz ++ ");"
+printStmt c (PSet mid addr typ sz) = "PSet(" ++ show mid ++ ", " ++ printExp addr ++ ", " ++ typ ++ ", " ++ printExp sz ++ ");"
 printStmt c (CallM fncn args) = fncn ++ "(" ++ concat (intersperse "," $ map printExp args) ++ ");"
 printStmt c (NameListM ns) = concat $ intersperse ", " ns
 printStmt c (BlockStmt []) = error $ "Empty BlockStmt is suspect."
@@ -79,12 +82,15 @@ printStmt c (InitStmt typ varID Nothing) = printTabbedS c $ typ ++ " " ++ varID 
 printStmt c (InitStmt typ varID (Just rhs)) = printTabbedS c $ typ ++ " " ++ varID ++ " = " ++ printExp rhs ++ ";"
 
 printExp :: MacroExp -> String
+printExp (QExpID []) = error "Empty QExpID found"
+printExp (QExpID xs) = concat $ intersperse "_" $ reverse xs
 printExp (ExpID s) = s
 printExp (PlusC e1 e2) = printExpSafe e1 ++ " + " ++ printExpSafe e2
 printExp (MinusC e1 e2) = printExpSafe e1 ++ " - " ++ printExpSafe e2
 printExp (IntC i) = show i
 printExp (CastC typ e) = "(" ++ typ ++ ")" ++ printExpSafe e
 printExp (TernaryIf bool_e e1 e2) = "(" ++ printBoolExpr bool_e ++ ") ? " ++ printExpSafe e1 ++ " : " ++ printExpSafe e2
+printExp ExpNoArg = ""
 
 -- Safely parenthesize things.
 printExpSafe (ExpID s) = s
