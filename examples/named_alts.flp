@@ -1,0 +1,16 @@
+
+VariableHeader -> union {
+    Small -> seq { 1 words, # words }
+  | Large -> seq { 2 words, # words }
+}
+
+%transition VariableHeader 0 (is_small)
+%transition VariableHeader 1 (!is_small)
+
+FixedHeader -> union {
+    Mini -> 1 words
+  | Big  -> 2 words
+}
+
+%transition FixedHeader 0 (is_mini)
+%transition FixedHeader 1 (!is_mini)

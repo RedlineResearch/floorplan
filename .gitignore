@@ -3,6 +3,6 @@
 /dist
 Cargo.lock
 /*.lock
-.stack-work/
+.stack-work*
 flp.cabal
 *~
