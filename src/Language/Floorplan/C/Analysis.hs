@@ -56,12 +56,10 @@ justName ((ns,_):_) (n ::: e) = Just (n : ns, e)
 justName _ _ = Nothing
 
 baseRefParams :: Bool -> BaseExp -> [String]
-baseRefParams is_explicit be
-  | is_explicit = ["qname_type", "addr"]
-  | otherwise   = ["qname_type", "addr"] ++ 
-      case expSize be of
-        Nothing -> ["size_in_bytes"] -- Extra parameter when the size is indeterminate
-        Just sz -> []
+baseRefParams True be
+  | numFreeFills be == 0 = ["qname_type", "addr"] -- purposely weaker test here for excluding size paramter.
+  | otherwise            = ["qname_type", "addr"] ++ maybeSizeParam be
+baseRefParams False be = ["qname_type", "addr"] ++ maybeSizeParam be
 
 isExplicit :: NameID -> Transitions -> Bool
 isExplicit n ts =
@@ -69,12 +67,17 @@ isExplicit n ts =
     Nothing -> False
     Just _  -> True
 
-transParams :: Bool -> BaseExp -> [String]
-transParams True  be = ["addr"]
-transParams False be = ["addr"] ++
+maybeSizeParam be =
   case expSize be of
-    Nothing -> ["size_in_bytes"]
+    Nothing -> ["size_in_bytes"] -- Extra parameter when the size is indeterminate
     Just sz -> []
+
+transParams :: Bool -> BaseExp -> [String]
+transParams True  be
+  | numFreeFills be == 0 = ["addr"] -- weaker test of fixed-sizedness. nested explicit transitions should work here, but probably gross in general to use.
+  | otherwise            = ["addr"] ++ maybeSizeParam be
+transParams False be     = ["addr"] ++ maybeSizeParam be
+
 
 --type BaseExp = FLPS.Exp AttrBaseExp
 
